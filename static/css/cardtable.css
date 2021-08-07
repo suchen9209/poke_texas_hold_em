@@ -1,0 +1,47 @@
+.container .position{
+    position: relative;
+    display: inline-block;
+    width: 200px;
+    height: 200px;
+    padding-left: 10px;
+}
+
+.container .position#pos1{
+    background-color: aliceblue;
+}
+
+.container .position#pos2{
+    background-color: antiquewhite;
+}
+
+.container .position#pos3{
+    background-color: aqua;
+}
+
+.container .position#pos4{
+    background-color: coral;
+}
+
+.container .position#pos5{
+    background-color: cadetblue;
+}
+
+.container .position#pos6{
+    background-color: rosybrown;
+}
+
+.container .position#pos7{
+    background-color: palegreen;
+}
+
+.container .position#pos8{
+    background-color: lightcoral;
+}
+
+.container .position#pos9{
+    background-color: tomato;
+}
+
+.user_card{
+    display: inline-block;
+}

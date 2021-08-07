@@ -3,8 +3,10 @@
 <title>{{i18n .Lang "websocket_chatroom"}} - {{i18n .Lang "app_intro"}}</title>
 {{end}}
 {{define "body"}}
+
 <div class="container">
     <h3>{{i18n .Lang "username"}}: <span id="uname">{{.UserName}}</span></h3>
+    <button id="sendbtn" type="button" class="btn btn-default">{{i18n .Lang "Send"}}</button>
     <h4>{{i18n .Lang "send_box"}}:</h4>
     <form class="form-inline">
         <div class="col-md-6 form-group">
@@ -12,8 +14,47 @@
         </div>
         <button id="sendbtn" type="button" class="btn btn-default">{{i18n .Lang "Send"}}</button>
     </form>
-</div>
 
+    <button id="start_game" type="button" class="button button-royal button-pill button-giant">{{i18n .Lang "start_button"}}</button>
+
+</div>
+<div class="container">
+    <h3>{{i18n .Lang "card_table"}}:</h3>
+    <div class="container" id="card_table">
+        <div class="position" id="pos1">
+            <span class="user_name"></span>
+            <div class="user_card"></div>
+        </div>
+        <div class="position" id="pos2">
+        <span class="user_name"></span>
+            <div class="user_card"></div>
+            </div>
+        <div class="position" id="pos3">
+        <span class="user_name"></span>
+            <div class="user_card"></div>
+        </div>
+        <div class="position" id="pos4">
+        <span class="user_name"></span>
+            <div class="user_card"></div>
+        </div>
+        <div class="position" id="pos5">
+        <span class="user_name"></span>
+            <div class="user_card"></div>
+        </div>
+        <div class="position" id="pos6">
+        <span class="user_name"></span>
+            <div class="user_card"></div>
+        </div>
+        <div class="position" id="pos7">
+        <span class="user_name"></span>
+            <div class="user_card"></div>
+        </div>
+        <div class="position" id="pos8">
+        <span class="user_name"></span>
+            <div class="user_card"></div>
+        </div>
+    </div>
+</div>
 <div class="container">
     <h3>{{i18n .Lang "chat_history"}}:</h3>
     <ul id="chatbox">

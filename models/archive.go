@@ -24,6 +24,15 @@ const (
 	EVENT_JOIN = iota
 	EVENT_LEAVE
 	EVENT_MESSAGE
+	EVENT_LICENSING
+	EVENT_PUBLIC_CARD
+)
+
+type UserType int
+
+const (
+	POKER_PLAYER = iota
+	VIEWER
 )
 
 type Event struct {
@@ -31,6 +40,19 @@ type Event struct {
 	User      string
 	Timestamp int // Unix timestamp (secs)
 	Content   string
+}
+
+type CardInfo struct {
+	Type      EventType
+	User      string
+	Position  int
+	Timestamp int // Unix timestamp (secs)
+	Card      Card
+}
+
+type ClientMessage struct {
+	Message string
+	Type    string
 }
 
 const archiveSize = 20

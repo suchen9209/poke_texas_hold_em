@@ -44,34 +44,47 @@ func (this *WebSocketController) Get() {
 }
 
 // Join method handles WebSocket requests for WebSocketController.
-func (this *WebSocketController) Join() {
-	uname := this.GetString("uname")
+func (w *WebSocketController) Join() {
+	uname := w.GetString("uname")
 	if len(uname) == 0 {
-		this.Redirect("/", 302)
+		w.Redirect("/", 302)
 		return
 	}
 
 	// Upgrade from http request to WebSocket.
-	ws, err := websocket.Upgrade(this.Ctx.ResponseWriter, this.Ctx.Request, nil, 1024, 1024)
+	ws, err := websocket.Upgrade(w.Ctx.ResponseWriter, w.Ctx.Request, nil, 1024, 1024)
 	if _, ok := err.(websocket.HandshakeError); ok {
-		http.Error(this.Ctx.ResponseWriter, "Not a websocket handshake", 400)
+		http.Error(w.Ctx.ResponseWriter, "Not a websocket handshake", 400)
 		return
 	} else if err != nil {
 		logs.Error("Cannot setup WebSocket connection:", err)
 		return
 	}
 
+	user, reg := models.CheckUser(uname)
+	if reg {
+		Join(uname, ws, models.POKER_PLAYER, *user)
+	} else {
+		Join(uname, ws, models.VIEWER, *user)
+	}
+
 	// Join chat room.
-	Join(uname, ws)
 	defer Leave(uname)
 
 	// Message receive loop.
 	for {
 		_, p, err := ws.ReadMessage()
+		logs.Info(p)
 		if err != nil {
 			return
 		}
 		publish <- newEvent(models.EVENT_MESSAGE, uname, string(p))
+		data := new(models.ClientMessage)
+		json.Unmarshal(p, data)
+		if data.Type == "game_op" {
+			gameop <- data.Message
+		}
+
 	}
 }
 
