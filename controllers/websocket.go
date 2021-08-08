@@ -65,16 +65,14 @@ func (w *WebSocketController) Join() {
 	if reg {
 		Join(uname, ws, models.POKER_PLAYER, *user)
 	} else {
+		//游客退出暂无
 		Join(uname, ws, models.VIEWER, *user)
 	}
 
-	// Join chat room.
-	defer Leave(uname)
+	defer Leave(*user)
 
-	// Message receive loop.
 	for {
 		_, p, err := ws.ReadMessage()
-		logs.Info(p)
 		if err != nil {
 			return
 		}
@@ -102,7 +100,7 @@ func broadcastWebSocket(event models.Event) {
 		if ws != nil {
 			if ws.WriteMessage(websocket.TextMessage, data) != nil {
 				// User disconnected.
-				unsubscribe <- sub.Value.(Subscriber).Name
+				unsubscribe <- sub.Value.(Subscriber).User
 			}
 		}
 	}

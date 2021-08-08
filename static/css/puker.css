@@ -1,0 +1,88 @@
+/*通用扑克牌设置*/
+.card{
+    width: 80px;
+    height: 120px;
+    display: inline-block;
+    margin-left: 10px;
+}
+.face{
+    border-radius: 10px;
+    width: 100%;
+    height: 100%
+}
+.front{
+    background: #999 url(../img/puker.png) 0 100%;
+}
+.back{
+    background: #efefef url(../img/puker.png) 0 100%;
+}
+/* background-position: 百分制;
+等同于x：{容器(container)的宽度—背景图片的宽度}*x百分比，超出的部分隐藏。
+等同于y：{容器(container)的高度—背景图片的高度}*y百分比，超出的部分隐藏。
+*/
+/*spade 黑桃A-K*/
+.puker-spade14{background-position: 0 0}
+.puker-spade2{background-position: 8.333% 0}
+.puker-spade3{background-position: 16.667% 0}
+.puker-spade4{background-position: 25% 0}
+.puker-spade5{background-position: 33.333% 0}
+.puker-spade6{background-position: 41.6667% 0}
+.puker-spade7{background-position: 50% 0}
+.puker-spade8{background-position: 58.333% 0}
+.puker-spade9{background-position: 66.667% 0}
+.puker-spade10{background-position: 75% 0}
+.puker-spade11{background-position: 83.333% 0}
+.puker-spade12{background-position: 91.667% 0}
+.puker-spade13{background-position: 100% 0}
+
+/*heart 紅桃A-K*/
+.puker-heart14{background-position: 0 25%}
+.puker-heart2{background-position: 8.333% 25%}
+.puker-heart3{background-position: 16.667% 25%}
+.puker-heart4{background-position: 25% 25%}
+.puker-heart5{background-position: 33.333% 25%}
+.puker-heart6{background-position: 41.6667% 25%}
+.puker-heart7{background-position: 50% 25%}
+.puker-heart8{background-position: 58.333% 25%}
+.puker-heart9{background-position: 66.667% 25%}
+.puker-heart10{background-position:75% 25%}
+.puker-heart11{background-position:83.333% 25%}
+.puker-heart12{background-position:91.667% 25%}
+.puker-heart13{background-position:100% 25%}
+
+/*Diamond 方片*/
+.puker-diamond14{background-position: 0 50%}
+.puker-diamond2{background-position: 8.333% 50%}
+.puker-diamond3{background-position: 16.667% 50%}
+.puker-diamond4{background-position: 25% 50%}
+.puker-diamond5{background-position: 33.333% 50%}
+.puker-diamond6{background-position: 41.6667% 50%}
+.puker-diamond7{background-position: 50% 50%}
+.puker-diamond8{background-position: 58.333% 50%}
+.puker-diamond9{background-position: 66.667% 50%}
+.puker-diamond10{background-position: 75% 50%}
+.puker-diamond11{background-position: 83.333% 50%}
+.puker-diamond12{background-position: 91.667% 50%}
+.puker-diamond13{background-position: 100% 50%}
+
+
+/*Club 梅花 A-K */
+.puker-club14{background-position: 0 75%}
+.puker-club2{background-position: 8.333% 75%}
+.puker-club3{background-position: 16.667% 75%}
+.puker-club4{background-position: 25% 75%}
+.puker-club5{background-position: 33.333% 75%}
+.puker-club6{background-position: 41.6667% 75%}
+.puker-club7{background-position: 50% 75%}
+.puker-club8{background-position: 58.333% 75%}
+.puker-club9{background-position:66.667% 75%}
+.puker-club10{background-position: 75% 75%}
+.puker-club11{background-position: 83.333% 75%}
+.puker-club12{background-position: 91.667% 75%}
+.puker-club13{background-position: 100% 75%}
+
+/*大小王*/
+.puker-big-kingA{background-position: 8.333% 100%}
+.puker-small-kingA{background-position: 16.667% 100%}
+.puker-big-kingB{background-position: 25% 100%}
+.puker-small-kingB{background-position: 33.333% 100%}

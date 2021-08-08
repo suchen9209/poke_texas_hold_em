@@ -27,5 +27,9 @@ func init() {
 	// create table
 	// orm.RunSyncdb("default", false, true)
 	orm.RegisterModel(new(User))
+	orm.RegisterModel(new(Game))
+	orm.RegisterModel(new(GameMatch))
+	orm.RegisterModel(new(GameMatchLog))
+	orm.RegisterModel(new(GameUser))
 	o = orm.NewOrm()
 }

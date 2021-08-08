@@ -15,8 +15,16 @@
         <button id="sendbtn" type="button" class="btn btn-default">{{i18n .Lang "Send"}}</button>
     </form>
 
-    <button id="start_game" type="button" class="button button-royal button-pill button-giant">{{i18n .Lang "start_button"}}</button>
+    <button id="start_game" type="button" class="button button-royal button-pill button-large">{{i18n .Lang "start_button"}}</button>
+    <button id="show_card3" type="button" class="button button-highlight button-pill button-large">show3</button>
+    <button id="show_card4" type="button" class="button button-highlight button-pill button-large">show4</button>
+    <button id="show_card5" type="button" class="button button-highlight button-pill button-large">show5</button>
 
+</div>
+<div class="container">
+    <h3>Public Card:</h3>
+    <div class="container" id="public_card_table">
+    </div>
 </div>
 <div class="container">
     <h3>{{i18n .Lang "card_table"}}:</h3>

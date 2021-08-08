@@ -29,9 +29,11 @@ const (
 )
 
 var cardMap map[int]Card
+var PublicCard map[int]Card
 
 func InitCardMap() {
 	cardMap = make(map[int]Card, 52)
+	PublicCard = make(map[int]Card)
 	suitsArr := [4]string{HEART, DIAMOND, SPADE, CLUB}
 	index := 1
 	for i := POKER_NUMBER_2; i <= POKER_NUMBER_A; i++ {
