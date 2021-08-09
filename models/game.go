@@ -49,6 +49,13 @@ type GameUser struct {
 	Online   int
 }
 
+type UserPointSeat struct {
+	UserId   int
+	Name     string
+	Position int
+	Point    int
+}
+
 const GAMEUSERNUMBER = 8
 
 func SetUserReturnPlayer(u User) int {
@@ -96,4 +103,10 @@ func SetUserReturnPlayer(u User) int {
 
 func RemoveGameUser(uid int, gid int) {
 	o.QueryTable("game_user").Filter("game_id", gid).Filter("user_id", uid).Delete()
+}
+
+func GetUserPointWithSeat(gid int) []UserPointSeat {
+	var gu []UserPointSeat
+	o.Raw(`select gu.user_id,u.name,gu.position, u.point from game_user as gu left join user as u on u.id = gu.user_id where gu.game_id = ?`).SetArgs(1).QueryRows(&gu)
+	return gu
 }

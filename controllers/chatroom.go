@@ -66,14 +66,20 @@ type Subscriber struct {
 	User     models.User
 }
 
+type UserInfoMsg struct {
+	Type models.EventType
+	Info []models.UserPointSeat
+}
+
 var (
 	// Channel for new join users.
 	subscribe = make(chan Subscriber, 1000)
 	// Channel for exit users.
 	unsubscribe = make(chan models.User, 1000)
 	// Send events here to publish them.
-	publish     = make(chan models.Event, 1000)
-	gameprocess = make(chan models.CardInfo, 1000)
+	publish         = make(chan models.Event, 1000)
+	gameprocess     = make(chan models.CardInfo, 1000)
+	userInfoChannel = make(chan models.Event, 1000)
 
 	gameop = make(chan string)
 
@@ -90,6 +96,7 @@ func chatroom() {
 		select {
 		case op := <-gameop:
 			if op == "start" {
+				userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
 				models.InitCardMap()
 				for ss := seat.Front(); ss != nil; ss = ss.Next() {
 					ws := ss.Value.(Player).Conn
@@ -162,6 +169,24 @@ func chatroom() {
 					ws := ss.Value.(Player).Conn
 					if ws != nil {
 						msg, _ := json.Marshal(process)
+						if ws.WriteMessage(websocket.TextMessage, msg) != nil {
+							// User disconnected.
+							unsubscribe <- ss.Value.(Player).user
+						}
+					}
+
+				}
+			}
+		case userInfo := <-userInfoChannel:
+			logs.Info(userInfo)
+			if userInfo.Type == models.EVENT_REFRESH_USER_INFO {
+				var data UserInfoMsg
+				data.Type = userInfo.Type
+				data.Info = models.GetUserPointWithSeat(1)
+				for ss := seat.Front(); ss != nil; ss = ss.Next() {
+					ws := ss.Value.(Player).Conn
+					if ws != nil {
+						msg, _ := json.Marshal(data)
 						if ws.WriteMessage(websocket.TextMessage, msg) != nil {
 							// User disconnected.
 							unsubscribe <- ss.Value.(Player).user

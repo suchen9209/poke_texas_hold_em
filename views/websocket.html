@@ -6,19 +6,22 @@
 
 <div class="container">
     <h3>{{i18n .Lang "username"}}: <span id="uname">{{.UserName}}</span></h3>
-    <button id="sendbtn" type="button" class="btn btn-default">{{i18n .Lang "Send"}}</button>
-    <h4>{{i18n .Lang "send_box"}}:</h4>
-    <form class="form-inline">
-        <div class="col-md-6 form-group">
-            <input id="sendbox" type="text" class="form-control" onkeydown="if(event.keyCode==13)return false;" required>
+    <input type="hidden" id="user_id" value=""/>
+    <div class="quantity row">
+        <input id="add_point" type="number" min="0" max="999999" step="50" value="0">
+        <div class="quantity-nav">
+            <div class="quantity-button quantity-up">+</div>
+            <div class="quantity-button quantity-down">-</div>
         </div>
-        <button id="sendbtn" type="button" class="btn btn-default">{{i18n .Lang "Send"}}</button>
-    </form>
 
-    <button id="start_game" type="button" class="button button-royal button-pill button-large">{{i18n .Lang "start_button"}}</button>
-    <button id="show_card3" type="button" class="button button-highlight button-pill button-large">show3</button>
-    <button id="show_card4" type="button" class="button button-highlight button-pill button-large">show4</button>
-    <button id="show_card5" type="button" class="button button-highlight button-pill button-large">show5</button>
+        <button id="add_point_button" type="button" class="button button-highlight button-pill button-large">Add</button>
+    </div>
+    <div class="row" style="margin-top:10px;">
+        <button id="start_game" type="button" class="button button-royal button-pill button-large">{{i18n .Lang "start_button"}}</button>
+        <button id="show_card3" type="button" class="button button-highlight button-pill button-large">show3</button>
+        <button id="show_card4" type="button" class="button button-highlight button-pill button-large">show4</button>
+        <button id="show_card5" type="button" class="button button-highlight button-pill button-large">show5</button>
+    </div>
 
 </div>
 <div class="container">
@@ -30,35 +33,59 @@
     <h3>{{i18n .Lang "card_table"}}:</h3>
     <div class="container" id="card_table">
         <div class="position" id="pos1">
-            <span class="user_name"></span>
+            <div class="user_info">
+                Name:<span class="user_name"></span><br/>
+                Point:<span class="user_point"></span>
+            </div>            
             <div class="user_card"></div>
         </div>
         <div class="position" id="pos2">
-        <span class="user_name"></span>
+            <div class="user_info">
+                Name:<span class="user_name"></span><br/>
+                Point:<span class="user_point"></span>
+            </div>            
             <div class="user_card"></div>
-            </div>
+        </div>
         <div class="position" id="pos3">
-        <span class="user_name"></span>
+            <div class="user_info">
+                Name:<span class="user_name"></span><br/>
+                Point:<span class="user_point"></span>
+            </div>            
             <div class="user_card"></div>
         </div>
         <div class="position" id="pos4">
-        <span class="user_name"></span>
+            <div class="user_info">
+                Name:<span class="user_name"></span><br/>
+                Point:<span class="user_point"></span>
+            </div>            
             <div class="user_card"></div>
         </div>
         <div class="position" id="pos5">
-        <span class="user_name"></span>
+            <div class="user_info">
+                Name:<span class="user_name"></span><br/>
+                Point:<span class="user_point"></span>
+            </div>            
             <div class="user_card"></div>
         </div>
         <div class="position" id="pos6">
-        <span class="user_name"></span>
+            <div class="user_info">
+                Name:<span class="user_name"></span><br/>
+                Point:<span class="user_point"></span>
+            </div>            
             <div class="user_card"></div>
         </div>
         <div class="position" id="pos7">
-        <span class="user_name"></span>
+            <div class="user_info">
+                Name:<span class="user_name"></span><br/>
+                Point:<span class="user_point"></span>
+            </div>            
             <div class="user_card"></div>
         </div>
         <div class="position" id="pos8">
-        <span class="user_name"></span>
+            <div class="user_info">
+                Name:<span class="user_name"></span><br/>
+                Point:<span class="user_point"></span>
+            </div>            
             <div class="user_card"></div>
         </div>
     </div>

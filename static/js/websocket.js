@@ -7,6 +7,7 @@ function get_card_html(color,value){
     return html;
     
 }
+
 $(document).ready(function () {
     // Create a socket
     socket = new WebSocket('ws://' + window.location.host + '/ws/join?uname=' + $('#uname').text());
@@ -42,7 +43,7 @@ $(document).ready(function () {
             break;
         case 3://发牌
             let pos_str = "#pos" + data.Position;
-            $(pos_str + " .user_name").html(data.User);
+            // $(pos_str + " .user_name").html(data.User);
             let card_html = get_card_html(data.Card.Color,data.Card.Value);
             $(pos_str + " .user_card").append(card_html)
             break;
@@ -54,19 +55,23 @@ $(document).ready(function () {
             $(".user_card").html("")
             $("#public_card_table").html("")
             break;
+        case 6://更新用户信息
+            let info = data.Info;
+            for (const key in info) {
+                if (Object.hasOwnProperty.call(info, key)) {
+                    const element = info[key];
+                    let pos_str = "#pos" + info[key].Position;
+                    $(pos_str + " .user_name").html(info[key].Name);
+                    $(pos_str + " .user_point").html(info[key].Point);
+                    
+                }
+            }
+            
+            break;
         }
 
         $('#chatbox li').first().before(li);
     };
-    
-
-    // Send messages.
-    var postConecnt = function () {
-        var uname = $('#uname').text();
-        var content = $('#sendbox').val();
-        socket.send(content);
-        $('#sendbox').val('');
-    }
 
     var postMsg = function (message,type){
         let msg = {
@@ -77,8 +82,9 @@ $(document).ready(function () {
         socket.send(send_json);
     }
 
-    $('#sendbtn').click(function () {
-        postConecnt();
+    $('#add_point_button').click(function () {
+        var add_point = $('#add_point').val();
+        postMsg(add_point,'add_point');
     });
 
     $('#start_game').click(function () {
@@ -99,6 +105,41 @@ $(document).ready(function () {
     $('#show_card5').click(function () {
         postMsg('show_card5','game_op');
     });
+
+    $('.quantity').each(function() {
+        var spinner = $(this),
+          input = spinner.find('input[type="number"]'),
+          btnUp = spinner.find('.quantity-up'),
+          btnDown = spinner.find('.quantity-down'),
+          min = input.attr('min'),
+          max = input.attr('max');
+          step = input.attr('step');
+
+          step = parseInt(step)
+      
+        btnUp.click(function() {
+          var oldValue = parseFloat(input.val());
+          if (oldValue >= max) {
+            var newVal = oldValue;
+          } else {
+            var newVal = oldValue + step;
+          }
+          spinner.find("input").val(newVal);
+          spinner.find("input").trigger("change");
+        });
+      
+        btnDown.click(function() {
+          var oldValue = parseFloat(input.val());
+          if (oldValue <= min) {
+            var newVal = oldValue;
+          } else {
+            var newVal = oldValue - step;
+          }
+          spinner.find("input").val(newVal);
+          spinner.find("input").trigger("change");
+        });
+      
+      });
 
 
 });

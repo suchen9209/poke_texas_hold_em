@@ -79,8 +79,11 @@ func (w *WebSocketController) Join() {
 		publish <- newEvent(models.EVENT_MESSAGE, uname, string(p))
 		data := new(models.ClientMessage)
 		json.Unmarshal(p, data)
-		if data.Type == "game_op" {
+		switch data.Type {
+		case "game_op":
 			gameop <- data.Message
+		case "add_point":
+			logs.Info(data)
 		}
 
 	}
