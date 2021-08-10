@@ -80,6 +80,7 @@ var (
 	publish         = make(chan models.Event, 1000)
 	gameprocess     = make(chan models.CardInfo, 1000)
 	userInfoChannel = make(chan models.Event, 1000)
+	roundprocess    = make(chan models.RoundInfo, 1000)
 
 	gameop = make(chan string)
 
@@ -87,7 +88,10 @@ var (
 	waitingList = list.New()
 	subscribers = list.New()
 
-	seat = list.New()
+	seat         = list.New()
+	positionTurn int //记录当前轮到的玩家位置
+
+	nowGameMatch models.GameMatch
 )
 
 // This function handles all incoming chan messages.
@@ -97,25 +101,19 @@ func chatroom() {
 		case op := <-gameop:
 			if op == "start" {
 				userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
+				nowGameMatch = models.InitGameMatch(1)
 				models.InitCardMap()
-				for ss := seat.Front(); ss != nil; ss = ss.Next() {
-					ws := ss.Value.(Player).Conn
-					if ws != nil {
-						tmp_card := models.CardInfo{
-							Type: models.EVENT_CLEAR_CARD,
-						}
-						msg, _ := json.Marshal(tmp_card)
-						if ws.WriteMessage(websocket.TextMessage, msg) != nil {
-							// User disconnected.
-							unsubscribe <- ss.Value.(Player).user
-						}
-					}
+				nowGameMatch.GameStatus = "LICENSING"
+				models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 
+				tmp_card := models.CardInfo{
+					Type: models.EVENT_CLEAR_CARD,
 				}
+				sendMsgToSeat(tmp_card)
+
 				for ss := seat.Front(); ss != nil; ss = ss.Next() {
 					var tmp_poker = models.GetOneCard()
 					gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
-
 				}
 				for ss := seat.Front(); ss != nil; ss = ss.Next() {
 					var tmp_poker = models.GetOneCard()
@@ -126,6 +124,17 @@ func chatroom() {
 					var tmp_poker = models.GetOneCard()
 					models.PublicCard[i] = *tmp_poker
 				}
+				nowGameMatch.GameStatus = "ROUND1"
+				models.UpdateGameMatchStatus(nowGameMatch, "game_status")
+
+				roundprocess <- models.RoundInfo{
+					Type:            models.EVENT_ROUND_INFO,
+					GM:              nowGameMatch,
+					NowPosition:     nowGameMatch.SmallBindPosition,
+					AllPointInRound: 0,
+					MaxPoint:        0,
+				}
+				positionTurn = nowGameMatch.SmallBindPosition
 
 			}
 			if op == "show_card3" {
@@ -140,9 +149,11 @@ func chatroom() {
 				gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[5])
 			}
 		case process := <-gameprocess:
-			if process.Type == models.EVENT_LICENSING {
+			switch process.Type {
+			case models.EVENT_LICENSING:
 				var other_process = process
 				other_process.Card = models.Card{}
+				//这边需要特殊处理，所以暂时不走公共方法，后续如果有需要同样处理的位置再合
 				for ss := seat.Front(); ss != nil; ss = ss.Next() {
 					ws := ss.Value.(Player).Conn
 					if ss.Value.(Player).user.Name == process.User {
@@ -163,38 +174,24 @@ func chatroom() {
 						}
 					}
 				}
+			case models.EVENT_PUBLIC_CARD:
+				sendMsgToSeat(process)
 			}
-			if process.Type == models.EVENT_PUBLIC_CARD {
-				for ss := seat.Front(); ss != nil; ss = ss.Next() {
-					ws := ss.Value.(Player).Conn
-					if ws != nil {
-						msg, _ := json.Marshal(process)
-						if ws.WriteMessage(websocket.TextMessage, msg) != nil {
-							// User disconnected.
-							unsubscribe <- ss.Value.(Player).user
-						}
-					}
 
-				}
-			}
 		case userInfo := <-userInfoChannel:
 			logs.Info(userInfo)
 			if userInfo.Type == models.EVENT_REFRESH_USER_INFO {
 				var data UserInfoMsg
 				data.Type = userInfo.Type
 				data.Info = models.GetUserPointWithSeat(1)
-				for ss := seat.Front(); ss != nil; ss = ss.Next() {
-					ws := ss.Value.(Player).Conn
-					if ws != nil {
-						msg, _ := json.Marshal(data)
-						if ws.WriteMessage(websocket.TextMessage, msg) != nil {
-							// User disconnected.
-							unsubscribe <- ss.Value.(Player).user
-						}
-					}
-
-				}
+				sendMsgToSeat(data)
 			}
+		case roundInfo := <-roundprocess:
+			switch roundInfo.Type {
+			case models.EVENT_ROUND_INFO:
+				sendMsgToSeat(roundInfo)
+			}
+
 		case sub := <-subscribe:
 			if !isUserExist(subscribers, sub.Name) {
 				subscribers.PushBack(sub) // Add user to the end of list.
@@ -269,4 +266,18 @@ func isUserExist(subscribers *list.List, user string) bool {
 		}
 	}
 	return false
+}
+
+func sendMsgToSeat(data interface{}) {
+	for ss := seat.Front(); ss != nil; ss = ss.Next() {
+		ws := ss.Value.(Player).Conn
+		if ws != nil {
+			msg, _ := json.Marshal(data)
+			if ws.WriteMessage(websocket.TextMessage, msg) != nil {
+				// User disconnected.
+				unsubscribe <- ss.Value.(Player).user
+			}
+		}
+
+	}
 }

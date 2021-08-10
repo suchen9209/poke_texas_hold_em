@@ -1,4 +1,5 @@
 var socket;
+var my_position;
 
 function get_card_html(color,value){
     let html = '<div class="card">'+
@@ -6,6 +7,10 @@ function get_card_html(color,value){
     '</div>';
     return html;
     
+}
+
+function show_op_button(){
+    console.log("show button");
 }
 
 $(document).ready(function () {
@@ -63,10 +68,11 @@ $(document).ready(function () {
                     let pos_str = "#pos" + info[key].Position;
                     $(pos_str + " .user_name").html(info[key].Name);
                     $(pos_str + " .user_point").html(info[key].Point);
-                    
                 }
             }
-            
+            break;
+            case 7://回合信息
+            console.log(data)
             break;
         }
 

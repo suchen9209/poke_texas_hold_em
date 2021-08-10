@@ -10,10 +10,11 @@ const (
 	EVENT_JOIN = iota
 	EVENT_LEAVE
 	EVENT_MESSAGE
-	EVENT_LICENSING
-	EVENT_PUBLIC_CARD
-	EVENT_CLEAR_CARD
-	EVENT_REFRESH_USER_INFO
+	EVENT_LICENSING         //发牌
+	EVENT_PUBLIC_CARD       //公共牌
+	EVENT_CLEAR_CARD        //清理牌桌
+	EVENT_REFRESH_USER_INFO //更新用户信息
+	EVENT_ROUND_INFO        //回合信息
 )
 
 type UserType int
@@ -36,6 +37,14 @@ type CardInfo struct {
 	Position  int
 	Timestamp int // Unix timestamp (secs)
 	Card      Card
+}
+
+type RoundInfo struct {
+	Type            EventType
+	GM              GameMatch
+	NowPosition     int
+	AllPointInRound int
+	MaxPoint        int
 }
 
 type ClientMessage struct {

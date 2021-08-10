@@ -18,7 +18,6 @@ type GameMatch struct {
 	GameId            int
 	SmallBindPosition int
 	BigBindPosition   int
-	ButtonPosition    int
 	PotAll            int
 	Pot1st            int
 	Pot2nd            int
@@ -109,4 +108,48 @@ func GetUserPointWithSeat(gid int) []UserPointSeat {
 	var gu []UserPointSeat
 	o.Raw(`select gu.user_id,u.name,gu.position, u.point from game_user as gu left join user as u on u.id = gu.user_id where gu.game_id = ?`).SetArgs(1).QueryRows(&gu)
 	return gu
+}
+
+func InitGameMatch(gid int) GameMatch {
+	var tmp, new_game GameMatch
+	var game_user_list []GameUser
+	o.QueryTable("game_user").Filter("game_id", gid).Filter("online", 1).All(&game_user_list)
+	if game_user_list == nil {
+		panic("no user")
+	}
+	tmpMap := make(map[int]int)
+	for _, v := range game_user_list {
+		tmpMap[v.Position] = v.UserId
+	}
+	new_game.GameId = gid
+	o.QueryTable("game_match").Filter("game_id", gid).OrderBy("-id").One(&tmp)
+	if tmp.Id <= 0 {
+		//之前无对局
+		new_game.SmallBindPosition = getPosition(0, tmpMap)
+
+	} else {
+		new_game.SmallBindPosition = getPosition(tmp.SmallBindPosition, tmpMap)
+	}
+	new_game.BigBindPosition = getPosition(new_game.SmallBindPosition, tmpMap)
+	new_game.GameStatus = "INIT"
+	o.Insert(&new_game)
+	return new_game
+
+}
+
+func UpdateGameMatchStatus(gm GameMatch, key string) {
+	o.Update(&gm, key)
+}
+
+func getPosition(p1 int, tmap map[int]int) int {
+	for i := p1 + 1; i <= p1+8; i++ {
+		key := i % 8
+		if key == 0 {
+			key = 8
+		}
+		if _, ok := tmap[key]; ok {
+			return key
+		}
+	}
+	return 0
 }

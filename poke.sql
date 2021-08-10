@@ -45,8 +45,9 @@ CREATE TABLE `game_match` (
   `pot1st` int(11) DEFAULT NULL COMMENT '第一轮底池',
   `pot2nd` int(11) DEFAULT NULL COMMENT '第二轮底池',
   `pot3rd` int(11) DEFAULT NULL COMMENT '第三轮底池',
-  `pot4th` int(11) DEFAULT NULL COMMENT '第四轮底池',
+  `pot4th` int(11) DEFAULT NULL COMMENT '第四轮地址',
   `game_status` enum('INIT','LICENSING','ROUND1','ROUND2','ROUND3','ROUND4','END') DEFAULT NULL,
+  `create_time` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -81,7 +82,9 @@ CREATE TABLE `game_user` (
   `online` tinyint(4) DEFAULT 1 COMMENT '1为在线',
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`,`game_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+/*Data for the table `game_user` */
 
 /*Table structure for table `user` */
 
@@ -96,6 +99,17 @@ CREATE TABLE `user` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
+
+/*Data for the table `user` */
+
+insert  into `user`(`id`,`name`,`point`,`create_time`,`update_time`) values (1,'suchot',1000,'2021-08-07 17:31:52','2021-08-07 17:31:52');
+insert  into `user`(`id`,`name`,`point`,`create_time`,`update_time`) values (2,'wuke',1000,'2021-08-07 17:31:58','2021-08-07 17:31:58');
+insert  into `user`(`id`,`name`,`point`,`create_time`,`update_time`) values (3,'cjx',1000,'2021-08-07 17:32:04','2021-08-07 17:32:04');
+insert  into `user`(`id`,`name`,`point`,`create_time`,`update_time`) values (4,'djs',1000,'2021-08-07 17:32:10','2021-08-07 17:32:10');
+insert  into `user`(`id`,`name`,`point`,`create_time`,`update_time`) values (5,'muge',1000,'2021-08-07 17:32:17','2021-08-07 17:32:17');
+insert  into `user`(`id`,`name`,`point`,`create_time`,`update_time`) values (6,'jt',1000,'2021-08-07 17:32:23','2021-08-07 17:32:23');
+insert  into `user`(`id`,`name`,`point`,`create_time`,`update_time`) values (7,'laowang',1000,'2021-08-07 17:32:30','2021-08-07 17:32:30');
+insert  into `user`(`id`,`name`,`point`,`create_time`,`update_time`) values (8,'ashu',1000,'2021-08-07 17:32:33','2021-08-07 17:32:33');
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
