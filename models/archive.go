@@ -31,6 +31,13 @@ type Event struct {
 	Content   string
 }
 
+type SeatInfo struct {
+	Type      EventType // JOIN, LEAVE
+	User      string
+	Timestamp int // Unix timestamp (secs)
+	GameUser  GameUser
+}
+
 type CardInfo struct {
 	Type      EventType
 	User      string

@@ -76,7 +76,7 @@ func (w *WebSocketController) Join() {
 		if err != nil {
 			return
 		}
-		publish <- newEvent(models.EVENT_MESSAGE, uname, string(p))
+		// publish <- newEvent(models.EVENT_MESSAGE, uname, string(p))
 		data := new(models.ClientMessage)
 		json.Unmarshal(p, data)
 		switch data.Type {

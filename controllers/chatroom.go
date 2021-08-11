@@ -77,7 +77,7 @@ var (
 	// Channel for exit users.
 	unsubscribe = make(chan models.User, 1000)
 	// Send events here to publish them.
-	publish         = make(chan models.Event, 1000)
+	publish         = make(chan models.SeatInfo, 1000)
 	gameprocess     = make(chan models.CardInfo, 1000)
 	userInfoChannel = make(chan models.Event, 1000)
 	roundprocess    = make(chan models.RoundInfo, 1000)
@@ -92,6 +92,8 @@ var (
 	positionTurn int //记录当前轮到的玩家位置
 
 	nowGameMatch models.GameMatch
+
+	roundUserDetail = make(map[int]interface{})
 )
 
 // This function handles all incoming chan messages.
@@ -135,6 +137,14 @@ func chatroom() {
 					MaxPoint:        0,
 				}
 				positionTurn = nowGameMatch.SmallBindPosition
+				detailArr := models.GetRoundUserDetail(1)
+				roundUserDetail = make(map[int]interface{})
+				for _, v := range detailArr {
+					roundUserDetail[v.Position] = v
+				}
+				//发送消息 通知小盲，大盲位置，已下注5 10
+				//先写下注逻辑
+				//所以这里先通知小盲的回合
 
 			}
 			if op == "show_card3" {
@@ -193,23 +203,24 @@ func chatroom() {
 			}
 
 		case sub := <-subscribe:
-			if !isUserExist(subscribers, sub.Name) {
-				subscribers.PushBack(sub) // Add user to the end of list.
-				if sub.UserType == models.POKER_PLAYER {
-					pos := models.SetUserReturnPlayer(sub.User)
-					var player = new(Player)
-					player.user = sub.User
-					player.Position = pos
-					player.Conn = sub.Conn
-					seat.PushBack(*player)
-				}
+			subscribers.PushBack(sub) // Add user to the end of list.
+			if sub.UserType == models.POKER_PLAYER {
+				gu := models.SetUserReturnPlayer(sub.User)
 
-				// Publish a JOIN event.
-				publish <- newEvent(models.EVENT_JOIN, sub.Name, "")
-				logs.Info("New user:", sub.Name, ";WebSocket:", sub.Conn != nil)
-			} else {
-				logs.Info("Old user:", sub.Name, ";WebSocket:", sub.Conn != nil)
+				var player = new(Player)
+				player.user = sub.User
+				player.Position = gu.Position
+				player.Conn = sub.Conn
+				seat.PushBack(*player)
+				publish <- models.SeatInfo{
+					Type:     models.EVENT_JOIN,
+					GameUser: gu,
+					User:     sub.User.Name,
+				}
 			}
+			// Publish a JOIN event.
+			// publish <- newEvent(models.EVENT_JOIN, sub.Name, "")
+			logs.Info("User:", sub.Name, ";WebSocket:", sub.Conn != nil)
 		case event := <-publish:
 			// Notify waiting list.
 			for ch := waitingList.Back(); ch != nil; ch = ch.Prev() {
@@ -217,26 +228,32 @@ func chatroom() {
 				waitingList.Remove(ch)
 			}
 
-			broadcastWebSocket(event)
-			models.NewArchive(event)
-
-			if event.Type == models.EVENT_MESSAGE {
-				logs.Info("Message from", event.User, ";Content:", event.Content)
-			}
-		case unsub := <-unsubscribe:
-			for sub := subscribers.Front(); sub != nil; sub = sub.Next() {
-				if sub.Value.(Subscriber).User == unsub {
-					subscribers.Remove(sub)
-					// Clone connection.
-					ws := sub.Value.(Subscriber).Conn
-					if ws != nil {
-						ws.Close()
-						logs.Error("WebSocket closed:", unsub)
+			if event.Type == models.EVENT_JOIN {
+				for ss := seat.Front(); ss != nil; ss = ss.Next() {
+					if ss.Value.(Player).user.Name == event.User {
+						ws := ss.Value.(Player).Conn
+						if ws != nil {
+							msg, _ := json.Marshal(event)
+							if ws.WriteMessage(websocket.TextMessage, msg) != nil {
+								// User disconnected.
+								unsubscribe <- ss.Value.(Player).user
+							}
+						}
+						break
 					}
-					publish <- newEvent(models.EVENT_LEAVE, unsub.Name, "") // Publish a LEAVE event.
-					break
+
 				}
 			}
+
+			userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
+
+			// broadcastWebSocket(event)
+			// models.NewArchive(event)
+
+			if event.Type == models.EVENT_MESSAGE {
+				logs.Info("Message from", event.User, ";Content:", event.GameUser)
+			}
+		case unsub := <-unsubscribe:
 			for ss := seat.Front(); ss != nil; ss = ss.Next() {
 				if ss.Value.(Player).user == unsub {
 					seat.Remove(ss)
@@ -247,7 +264,13 @@ func chatroom() {
 						ws.Close()
 						logs.Error("WebSocket closed:", unsub.Name)
 					}
-					publish <- newEvent(models.EVENT_LEAVE, unsub.Name, "") // Publish a LEAVE event.
+					publish <- models.SeatInfo{
+						Type: models.EVENT_LEAVE,
+						GameUser: models.GameUser{
+							Position: ss.Value.(Player).Position,
+						},
+						User: unsub.Name,
+					} // Publish a LEAVE event.
 					break
 				}
 			}

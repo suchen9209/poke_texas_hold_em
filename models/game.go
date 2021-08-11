@@ -57,7 +57,7 @@ type UserPointSeat struct {
 
 const GAMEUSERNUMBER = 8
 
-func SetUserReturnPlayer(u User) int {
+func SetUserReturnPlayer(u User) GameUser {
 	//如果已经存在，则直接返回位置
 	var gut = &GameUser{
 		UserId: u.Id,
@@ -68,7 +68,7 @@ func SetUserReturnPlayer(u User) int {
 	if gut.Id > 0 {
 		gut.Online = 1
 		o.Update(gut)
-		return gut.Position
+		return *gut
 	}
 
 	//如果不存在查找剩余位置，分配座位
@@ -82,22 +82,21 @@ func SetUserReturnPlayer(u User) int {
 		poslit[g.Position] = g.UserId
 
 	}
+	var tmp_g GameUser
 	var pos int
 	for i := 1; i <= GAMEUSERNUMBER; i++ {
 		if poslit[i] == 0 {
 			pos = i
-			tmp_g := GameUser{
-				UserId:   u.Id,
-				GameId:   1,
-				Position: pos,
-				Online:   1,
-			}
+			tmp_g.UserId = u.Id
+			tmp_g.GameId = 1
+			tmp_g.Position = pos
+			tmp_g.Online = 1
 			o.Insert(&tmp_g)
 			break
 		}
 	}
 
-	return pos
+	return tmp_g
 }
 
 func RemoveGameUser(uid int, gid int) {
@@ -152,4 +151,18 @@ func getPosition(p1 int, tmap map[int]int) int {
 		}
 	}
 	return 0
+}
+
+type InRoundUserDetail struct {
+	UserId   int
+	Position int
+	Point    int
+	Name     string
+	AllowOp  []string //raise
+}
+
+func GetRoundUserDetail(gid int) []InRoundUserDetail {
+	var rmap []InRoundUserDetail
+	o.Raw("SELECT bgu.`user_id`,gu.`position`,u.point,u.name FROM game_user gu	LEFT JOIN `user` u  ON u.`id` = gu.`user_id` Where gu.game_id=?").SetArgs(gid).QueryRows(&rmap)
+	return rmap
 }

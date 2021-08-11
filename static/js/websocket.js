@@ -1,5 +1,6 @@
 var socket;
 var my_position;
+var uname;
 
 function get_card_html(color,value){
     let html = '<div class="card">'+
@@ -15,21 +16,25 @@ function show_op_button(){
 
 $(document).ready(function () {
     // Create a socket
-    socket = new WebSocket('ws://' + window.location.host + '/ws/join?uname=' + $('#uname').text());
+    uname = $('#uname').text()
+    socket = new WebSocket('ws://' + window.location.host + '/ws/join?uname=' + uname);
     // Message received on the socket
     socket.onmessage = function (event) {
         var data = JSON.parse(event.data);
         var li = document.createElement('li');
+        let pos_str;
 
         console.log(data);
 
         switch (data.Type) {
         case 0: // JOIN
-            if (data.User == $('#uname').text()) {
-                li.innerText = 'You joined the chat room.';
-            } else {
-                li.innerText = data.User + ' joined the chat room.';
+            if (data.User == uname) {
+                //You joined the chat room.
+                my_position = data.GameUser.Position
             }
+            // pos_str = "#pos" + data.GameUser.Position;
+            // $(pos_str + " .user_name").html(data.User);
+
             break;
         case 1: // LEAVE
             li.innerText = data.User + ' left the chat room.';
@@ -47,7 +52,7 @@ $(document).ready(function () {
 
             break;
         case 3://发牌
-            let pos_str = "#pos" + data.Position;
+            pos_str = "#pos" + data.Position;
             // $(pos_str + " .user_name").html(data.User);
             let card_html = get_card_html(data.Card.Color,data.Card.Value);
             $(pos_str + " .user_card").append(card_html)
@@ -71,8 +76,12 @@ $(document).ready(function () {
                 }
             }
             break;
-            case 7://回合信息
+        case 7://回合信息
             console.log(data)
+            if(data.NowPosition == my_position){
+                alert("Your turn")
+            }
+            //渲染回合内容
             break;
         }
 

@@ -9,13 +9,17 @@
     <input type="hidden" id="user_id" value=""/>
     <input type="hidden" id="position" value=""/>
     <div class="quantity row">
-        <input id="add_point" type="number" min="0" max="999999" step="50" value="0">
+        <input id="add_point" type="number" min="0" max="999999" step="5" value="0">
         <div class="quantity-nav">
             <div class="quantity-button quantity-up">+</div>
             <div class="quantity-button quantity-down">-</div>
         </div>
 
-        <button id="add_point_button" type="button" class="button button-highlight button-pill button-large">Add</button>
+        <button id="raise" type="button" class="button button-highlight button-circle button-jumbo">Raise</button>
+        <button id="call" type="button" class="button button-highlight button-circle button-jumbo">Call</button>
+        <button id="check" type="button" class="button button-caution button-circle button-jumbo">Check</button>
+        <button id="fold" type="button" class="button button-action button-circle button-jumbo">Fold</button>
+        <button id="allin" type="button" class="button button-primary button-circle button-jumbo">ALLIN</button>
     </div>
     <div class="row" style="margin-top:10px;">
         <button id="start_game" type="button" class="button button-royal button-pill button-large">{{i18n .Lang "start_button"}}</button>
