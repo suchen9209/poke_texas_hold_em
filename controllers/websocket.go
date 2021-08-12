@@ -82,8 +82,18 @@ func (w *WebSocketController) Join() {
 		switch data.Type {
 		case "game_op":
 			gameop <- data.Message
-		case "add_point":
-			logs.Info(data)
+		case "user_op":
+			top := models.UserOperationMsg{
+				Type:     models.EVENT_USER_OPERATION_INFO,
+				Position: data.Position,
+				Name:     data.Name,
+				GameMatchLog: models.GameMatchLog{
+					UserId:      data.UserId,
+					Operation:   data.Operation,
+					PointNumber: data.Point,
+				},
+			}
+			userOperationProcess <- top
 		}
 
 	}

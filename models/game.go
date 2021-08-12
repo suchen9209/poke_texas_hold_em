@@ -33,8 +33,15 @@ type GameMatchLog struct {
 	Id          int
 	GameMatchId int
 	UserId      int
-	Operation   int
+	Operation   string
 	PointNumber int
+}
+
+type UserOperationMsg struct {
+	Type         EventType
+	GameMatchLog GameMatchLog
+	Position     int
+	Name         string
 }
 
 /**
@@ -55,6 +62,8 @@ type UserPointSeat struct {
 	Point    int
 }
 
+const GAME_OP_RAISE = "raise"
+const GAME_OP_CALL = "call"
 const GAMEUSERNUMBER = 8
 
 func SetUserReturnPlayer(u User) GameUser {
@@ -154,15 +163,30 @@ func getPosition(p1 int, tmap map[int]int) int {
 }
 
 type InRoundUserDetail struct {
-	UserId   int
-	Position int
-	Point    int
-	Name     string
-	AllowOp  []string //raise
+	UserId     int
+	Position   int
+	Point      int
+	Name       string
+	RoundPoint int      //本轮押注
+	AllowOp    []string //raise
 }
 
 func GetRoundUserDetail(gid int) []InRoundUserDetail {
 	var rmap []InRoundUserDetail
-	o.Raw("SELECT bgu.`user_id`,gu.`position`,u.point,u.name FROM game_user gu	LEFT JOIN `user` u  ON u.`id` = gu.`user_id` Where gu.game_id=?").SetArgs(gid).QueryRows(&rmap)
+	o.Raw("SELECT gu.`user_id`,gu.`position`,u.point,u.name FROM game_user gu	LEFT JOIN `user` u  ON u.`id` = gu.`user_id` Where gu.game_id=?").SetArgs(gid).QueryRows(&rmap)
+	logs.Info(rmap)
 	return rmap
+}
+
+func AddGameMatchLog(gml GameMatchLog) {
+	o.Insert(&gml)
+}
+
+func ChangeUserPoint(uid int, point int) {
+	u := User{
+		Id: uid,
+	}
+	o.Read(&u)
+	u.Point = u.Point + point
+	o.Update(&u)
 }

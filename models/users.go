@@ -3,7 +3,7 @@ package models
 type User struct {
 	Id    int    `form:"-"`
 	Name  string `form:"name"`
-	Point string `form:"-"`
+	Point int    `form:"-"`
 }
 
 func CheckUser(name string) (*User, bool) {

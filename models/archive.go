@@ -10,11 +10,12 @@ const (
 	EVENT_JOIN = iota
 	EVENT_LEAVE
 	EVENT_MESSAGE
-	EVENT_LICENSING         //发牌
-	EVENT_PUBLIC_CARD       //公共牌
-	EVENT_CLEAR_CARD        //清理牌桌
-	EVENT_REFRESH_USER_INFO //更新用户信息
-	EVENT_ROUND_INFO        //回合信息
+	EVENT_LICENSING           //发牌
+	EVENT_PUBLIC_CARD         //公共牌
+	EVENT_CLEAR_CARD          //清理牌桌
+	EVENT_REFRESH_USER_INFO   //更新用户信息
+	EVENT_ROUND_INFO          //回合信息
+	EVENT_USER_OPERATION_INFO //用户操作信息
 )
 
 type UserType int
@@ -55,8 +56,13 @@ type RoundInfo struct {
 }
 
 type ClientMessage struct {
-	Message string
-	Type    string
+	Message   string
+	Type      string
+	Position  int
+	UserId    int
+	Point     int
+	Operation string
+	Name      string
 }
 
 const archiveSize = 20

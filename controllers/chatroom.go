@@ -77,10 +77,11 @@ var (
 	// Channel for exit users.
 	unsubscribe = make(chan models.User, 1000)
 	// Send events here to publish them.
-	publish         = make(chan models.SeatInfo, 1000)
-	gameprocess     = make(chan models.CardInfo, 1000)
-	userInfoChannel = make(chan models.Event, 1000)
-	roundprocess    = make(chan models.RoundInfo, 1000)
+	publish              = make(chan models.SeatInfo, 1000)
+	gameprocess          = make(chan models.CardInfo, 1000)
+	userInfoChannel      = make(chan models.Event, 1000)
+	roundprocess         = make(chan models.RoundInfo, 1000)
+	userOperationProcess = make(chan models.UserOperationMsg, 1000)
 
 	gameop = make(chan string)
 
@@ -90,10 +91,11 @@ var (
 
 	seat         = list.New()
 	positionTurn int //记录当前轮到的玩家位置
+	LimitPoint   int //当前轮最小点数值
 
 	nowGameMatch models.GameMatch
 
-	roundUserDetail = make(map[int]interface{})
+	roundUserDetail = make(map[int]models.InRoundUserDetail)
 )
 
 // This function handles all incoming chan messages.
@@ -129,20 +131,61 @@ func chatroom() {
 				nowGameMatch.GameStatus = "ROUND1"
 				models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 
-				roundprocess <- models.RoundInfo{
-					Type:            models.EVENT_ROUND_INFO,
-					GM:              nowGameMatch,
-					NowPosition:     nowGameMatch.SmallBindPosition,
-					AllPointInRound: 0,
-					MaxPoint:        0,
-				}
-				positionTurn = nowGameMatch.SmallBindPosition
+				//初始化座位
 				detailArr := models.GetRoundUserDetail(1)
-				roundUserDetail = make(map[int]interface{})
+				roundUserDetail = make(map[int]models.InRoundUserDetail)
+				logs.Info(detailArr)
 				for _, v := range detailArr {
 					roundUserDetail[v.Position] = v
 				}
+				logs.Info(roundUserDetail)
+
+				//小盲
+				positionTurn = nowGameMatch.SmallBindPosition
+				uomsg := models.UserOperationMsg{
+					Type:     models.EVENT_USER_OPERATION_INFO,
+					Position: nowGameMatch.SmallBindPosition,
+					Name:     roundUserDetail[nowGameMatch.SmallBindPosition].Name,
+					GameMatchLog: models.GameMatchLog{
+						GameMatchId: nowGameMatch.Id,
+						UserId:      roundUserDetail[nowGameMatch.SmallBindPosition].UserId,
+						Operation:   models.GAME_OP_RAISE,
+						PointNumber: 5,
+					},
+				}
+				userOperationProcess <- uomsg
+
+				//大盲
+				positionTurn = nowGameMatch.BigBindPosition
+				uomsg2 := models.UserOperationMsg{
+					Type:     models.EVENT_USER_OPERATION_INFO,
+					Position: nowGameMatch.BigBindPosition,
+					Name:     roundUserDetail[nowGameMatch.BigBindPosition].Name,
+					GameMatchLog: models.GameMatchLog{
+						GameMatchId: nowGameMatch.Id,
+						UserId:      roundUserDetail[nowGameMatch.BigBindPosition].UserId,
+						Operation:   models.GAME_OP_RAISE,
+						PointNumber: 10,
+					},
+				}
+				userOperationProcess <- uomsg2
+
 				//发送消息 通知小盲，大盲位置，已下注5 10
+				LimitPoint = 10
+				positionTurn = positionTurn + 1
+				if positionTurn > len(roundUserDetail) {
+					positionTurn = 1
+				}
+				if _, ok := roundUserDetail[positionTurn]; !ok {
+					positionTurn = nowGameMatch.SmallBindPosition
+				}
+				roundprocess <- models.RoundInfo{
+					Type:            models.EVENT_ROUND_INFO,
+					GM:              nowGameMatch,
+					NowPosition:     positionTurn,
+					AllPointInRound: 15,
+					MaxPoint:        LimitPoint,
+				}
 				//先写下注逻辑
 				//所以这里先通知小盲的回合
 
@@ -201,7 +244,26 @@ func chatroom() {
 			case models.EVENT_ROUND_INFO:
 				sendMsgToSeat(roundInfo)
 			}
-
+		case uop := <-userOperationProcess:
+			uop.GameMatchLog.GameMatchId = nowGameMatch.Id
+			switch uop.GameMatchLog.Operation {
+			case models.GAME_OP_RAISE:
+				a := roundUserDetail[uop.Position]
+				a.RoundPoint = a.RoundPoint + uop.GameMatchLog.PointNumber
+				a.Point = a.Point - uop.GameMatchLog.PointNumber
+				roundUserDetail[uop.Position] = a
+				models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
+				LimitPoint = a.RoundPoint
+			case models.GAME_OP_CALL:
+				a := roundUserDetail[uop.Position]
+				uop.GameMatchLog.PointNumber = LimitPoint - a.RoundPoint
+				a.RoundPoint = LimitPoint
+				a.Point = a.Point - uop.GameMatchLog.PointNumber
+				roundUserDetail[uop.Position] = a
+				models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
+			}
+			models.AddGameMatchLog(uop.GameMatchLog)
+			sendMsgToSeat(uop)
 		case sub := <-subscribe:
 			subscribers.PushBack(sub) // Add user to the end of list.
 			if sub.UserType == models.POKER_PLAYER {

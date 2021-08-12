@@ -1,6 +1,7 @@
 var socket;
 var my_position;
 var uname;
+var user_id;
 
 function get_card_html(color,value){
     let html = '<div class="card">'+
@@ -31,6 +32,7 @@ $(document).ready(function () {
             if (data.User == uname) {
                 //You joined the chat room.
                 my_position = data.GameUser.Position
+                user_id = data.GameUser.UserId
             }
             // pos_str = "#pos" + data.GameUser.Position;
             // $(pos_str + " .user_name").html(data.User);
@@ -97,6 +99,20 @@ $(document).ready(function () {
         socket.send(send_json);
     }
 
+    var postOperation = function (type,operation,point){
+        let msg = {
+            "Type"      :   type,
+            "Operation" :   operation,
+            "Point"     :   point,
+            "UserId"    :   user_id,
+            "Position"  :   my_position,
+            "Name"      :   uname
+        }
+        let send_json = JSON.stringify(msg);
+        socket.send(send_json);
+    }
+
+
     $('#add_point_button').click(function () {
         var add_point = $('#add_point').val();
         postMsg(add_point,'add_point');
@@ -119,6 +135,12 @@ $(document).ready(function () {
 
     $('#show_card5').click(function () {
         postMsg('show_card5','game_op');
+    });
+
+
+    $('#call').click(function () {
+        //call
+        postOperation('user_op','call',0);
     });
 
     $('.quantity').each(function() {
