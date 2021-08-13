@@ -64,6 +64,9 @@ type UserPointSeat struct {
 
 const GAME_OP_RAISE = "raise"
 const GAME_OP_CALL = "call"
+const GAME_OP_CHECK = "check"
+const GAME_OP_FOLD = "fold"
+const GAME_OP_ALLIN = "allin"
 const GAMEUSERNUMBER = 8
 
 func SetUserReturnPlayer(u User) GameUser {
@@ -180,6 +183,14 @@ func GetRoundUserDetail(gid int) []InRoundUserDetail {
 
 func AddGameMatchLog(gml GameMatchLog) {
 	o.Insert(&gml)
+}
+
+func GetUserPoint(uid int) int {
+	u := User{
+		Id: uid,
+	}
+	o.Read(&u)
+	return u.Point
 }
 
 func ChangeUserPoint(uid int, point int) {

@@ -79,7 +79,6 @@ $(document).ready(function () {
             }
             break;
         case 7://回合信息
-            console.log(data)
             if(data.NowPosition == my_position){
                 alert("Your turn")
             }
@@ -141,6 +140,29 @@ $(document).ready(function () {
     $('#call').click(function () {
         //call
         postOperation('user_op','call',0);
+    });
+
+    $('#raise').click(function () {
+        //raise
+        var add_point = $('#add_point').val();
+        postOperation('user_op','raise',add_point);
+    });
+
+    
+    $('#check').click(function () {
+        //check
+        postOperation('user_op','check',0);
+    });
+
+    
+    $('#fold').click(function () {
+        //check
+        postOperation('user_op','fold',0);
+    });
+    
+    $('#allin').click(function () {
+        //check
+        postOperation('user_op','allin',0);
     });
 
     $('.quantity').each(function() {
