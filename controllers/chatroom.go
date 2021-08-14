@@ -203,11 +203,11 @@ func chatroom() {
 				case "ROUND1":
 					nowGameMatch.Pot1st = nowGameMatch.Pot1st + roundUserDetail[uop.Position].RoundPoint
 				case "ROUND2":
-					nowGameMatch.Pot2nd = nowGameMatch.Pot1st + roundUserDetail[uop.Position].RoundPoint
+					nowGameMatch.Pot2nd = nowGameMatch.Pot2nd + roundUserDetail[uop.Position].RoundPoint
 				case "ROUND3":
-					nowGameMatch.Pot3rd = nowGameMatch.Pot1st + roundUserDetail[uop.Position].RoundPoint
+					nowGameMatch.Pot3rd = nowGameMatch.Pot3rd + roundUserDetail[uop.Position].RoundPoint
 				case "ROUND4":
-					nowGameMatch.Pot4th = nowGameMatch.Pot1st + roundUserDetail[uop.Position].RoundPoint
+					nowGameMatch.Pot4th = nowGameMatch.Pot4th + roundUserDetail[uop.Position].RoundPoint
 				}
 				delete(roundUserDetail, uop.Position)
 			}
@@ -544,10 +544,15 @@ func GameEnd() {
 		winPos, winName, winUserId = CalWinUser()
 	}
 	//计算获胜点数
+	logs.Info("game end ===  test ====")
+	logs.Info(nowGameMatch)
 	nowGameMatch.PotAll = nowGameMatch.Pot1st + nowGameMatch.Pot2nd + nowGameMatch.Pot3rd + nowGameMatch.Pot4th
+	logs.Info(nowGameMatch)
+	logs.Info(roundUserDetail)
 	for _, v := range roundUserDetail {
 		nowGameMatch.PotAll += v.RoundPoint
 	}
+	logs.Info(nowGameMatch)
 
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 	models.UpdateGameMatchStatus(nowGameMatch, "pot1st")
