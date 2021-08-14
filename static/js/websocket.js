@@ -146,6 +146,7 @@ $(document).ready(function () {
 
     $('#start_game').click(function () {
         postMsg('start','game_op');
+        $("#UserOp").append("");
     });
 
 

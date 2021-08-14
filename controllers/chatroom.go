@@ -109,85 +109,7 @@ func chatroom() {
 		select {
 		case op := <-gameop:
 			if op == "start" {
-				userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
-				nowGameMatch = models.InitGameMatch(1)
-				models.InitCardMap()
-				nowGameMatch.GameStatus = "LICENSING"
-				models.UpdateGameMatchStatus(nowGameMatch, "game_status")
-
-				tmp_card := models.CardInfo{
-					Type: models.EVENT_CLEAR_CARD,
-				}
-				sendMsgToSeat(tmp_card)
-
-				for ss := seat.Front(); ss != nil; ss = ss.Next() {
-					var tmp_poker = models.GetOneCard()
-					gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
-				}
-				for ss := seat.Front(); ss != nil; ss = ss.Next() {
-					var tmp_poker = models.GetOneCard()
-					gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
-				}
-
-				for i := 1; i <= 5; i++ {
-					var tmp_poker = models.GetOneCard()
-					models.PublicCard[i] = *tmp_poker
-				}
-				nowGameMatch.GameStatus = "ROUND1"
-				models.UpdateGameMatchStatus(nowGameMatch, "game_status")
-
-				//初始化座位
-				detailArr = models.GetRoundUserDetail(1)
-				roundUserDetail = make(map[int]models.InRoundUserDetail)
-				logs.Info("init seat")
-				logs.Info(detailArr)
-				for _, v := range detailArr {
-					roundUserDetail[v.Position] = v
-				}
-				logs.Info(roundUserDetail)
-
-				//小盲
-				positionTurn = nowGameMatch.SmallBindPosition
-				uomsg := models.UserOperationMsg{
-					Type:     models.EVENT_USER_OPERATION_INFO,
-					Position: nowGameMatch.SmallBindPosition,
-					Name:     roundUserDetail[nowGameMatch.SmallBindPosition].Name,
-					GameMatchLog: models.GameMatchLog{
-						GameMatchId: nowGameMatch.Id,
-						UserId:      roundUserDetail[nowGameMatch.SmallBindPosition].UserId,
-						Operation:   models.GAME_OP_RAISE,
-						PointNumber: 5,
-					},
-				}
-				userOperationProcess <- uomsg
-
-				//大盲
-				positionTurn = nowGameMatch.BigBindPosition
-				uomsg2 := models.UserOperationMsg{
-					Type:     models.EVENT_USER_OPERATION_INFO,
-					Position: nowGameMatch.BigBindPosition,
-					Name:     roundUserDetail[nowGameMatch.BigBindPosition].Name,
-					GameMatchLog: models.GameMatchLog{
-						GameMatchId: nowGameMatch.Id,
-						UserId:      roundUserDetail[nowGameMatch.BigBindPosition].UserId,
-						Operation:   models.GAME_OP_RAISE,
-						PointNumber: 10,
-					},
-				}
-				userOperationProcess <- uomsg2
-
-				//发送消息 通知小盲，大盲位置，已下注5 10
-				LimitPoint = 10
-				positionTurn = positionTurn + 1
-				if positionTurn > len(roundUserDetail) {
-					positionTurn = 1
-				}
-				if _, ok := roundUserDetail[positionTurn]; !ok {
-					positionTurn = nowGameMatch.SmallBindPosition
-				}
-				nextRoundInfo()
-				//先写下注逻辑
-				//所以这里先通知小盲的回合
+				startGame()
 
 			}
 			if op == "show_card3" {
@@ -295,37 +217,38 @@ func chatroom() {
 			logs.Info(roundUserDetail)
 			if len(roundUserDetail) <= 1 {
 				//game end
-			}
-			if fromCheck {
-				if roundCheckNumber < len(roundUserDetail) {
-					positionTurn = getNextPosition(roundUserDetail, positionTurn)
-				} else {
-					endRoundPoint()
-				}
-				nextRoundInfo()
+				GameEnd()
 			} else {
-				var have_not_fill_point bool
-				have_not_fill_point = false
-				for _, v := range roundUserDetail {
-					if v.RoundPoint != LimitPoint {
-						have_not_fill_point = true
-					}
-				}
-
-				if have_not_fill_point {
-					//next user
-					emptySend++
-					if emptySend > 2 {
+				if fromCheck {
+					if roundCheckNumber < len(roundUserDetail) {
 						positionTurn = getNextPosition(roundUserDetail, positionTurn)
+					} else {
+						endRoundPoint()
+					}
+					nextRoundInfo()
+				} else {
+					var have_not_fill_point bool
+					have_not_fill_point = false
+					for _, v := range roundUserDetail {
+						if v.RoundPoint != LimitPoint {
+							have_not_fill_point = true
+						}
+					}
+
+					if have_not_fill_point {
+						//next user
+						emptySend++
+						if emptySend > 2 {
+							positionTurn = getNextPosition(roundUserDetail, positionTurn)
+							nextRoundInfo()
+						}
+					} else {
+						//end this round
+						endRoundPoint()
 						nextRoundInfo()
 					}
-				} else {
-					//end this round
-					endRoundPoint()
-					nextRoundInfo()
 				}
 			}
-
 		case sub := <-subscribe:
 			subscribers.PushBack(sub) // Add user to the end of list.
 			if sub.UserType == models.POKER_PLAYER {
@@ -489,6 +412,11 @@ func endRoundPoint() {
 	logs.Info("end round" + nowGameMatch.GameStatus)
 	nowGameMatch.GameStatus = nextRound
 
+	if nowGameMatch.GameStatus == "END" {
+		//需比较剩余玩家的卡牌大小
+		GameEnd()
+	}
+
 	logs.Info(nowGameMatch)
 }
 
@@ -513,4 +441,127 @@ func getRoundPoint(round string, clear bool) int {
 		return nowGameMatch.Pot4th + remainRoundPoint
 	}
 	return 0
+}
+
+func startGame() {
+	emptySend = 0 //游戏结束时清零 仅用于记录大小盲
+	userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
+	nowGameMatch = models.InitGameMatch(1)
+	models.InitCardMap()
+	nowGameMatch.GameStatus = "LICENSING"
+	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
+
+	tmp_card := models.CardInfo{
+		Type: models.EVENT_CLEAR_CARD,
+	}
+	sendMsgToSeat(tmp_card)
+
+	for ss := seat.Front(); ss != nil; ss = ss.Next() {
+		var tmp_poker = models.GetOneCard()
+		gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
+	}
+	for ss := seat.Front(); ss != nil; ss = ss.Next() {
+		var tmp_poker = models.GetOneCard()
+		gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
+	}
+
+	for i := 1; i <= 5; i++ {
+		var tmp_poker = models.GetOneCard()
+		models.PublicCard[i] = *tmp_poker
+	}
+	nowGameMatch.GameStatus = "ROUND1"
+	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
+
+	//初始化座位
+	detailArr = models.GetRoundUserDetail(1)
+	roundUserDetail = make(map[int]models.InRoundUserDetail)
+	logs.Info("init seat")
+	logs.Info(detailArr)
+	for _, v := range detailArr {
+		roundUserDetail[v.Position] = v
+	}
+	logs.Info(roundUserDetail)
+
+	//小盲
+	positionTurn = nowGameMatch.SmallBindPosition
+	uomsg := models.UserOperationMsg{
+		Type:     models.EVENT_USER_OPERATION_INFO,
+		Position: nowGameMatch.SmallBindPosition,
+		Name:     roundUserDetail[nowGameMatch.SmallBindPosition].Name,
+		GameMatchLog: models.GameMatchLog{
+			GameMatchId: nowGameMatch.Id,
+			UserId:      roundUserDetail[nowGameMatch.SmallBindPosition].UserId,
+			Operation:   models.GAME_OP_RAISE,
+			PointNumber: 5,
+		},
+	}
+	userOperationProcess <- uomsg
+
+	//大盲
+	positionTurn = nowGameMatch.BigBindPosition
+	uomsg2 := models.UserOperationMsg{
+		Type:     models.EVENT_USER_OPERATION_INFO,
+		Position: nowGameMatch.BigBindPosition,
+		Name:     roundUserDetail[nowGameMatch.BigBindPosition].Name,
+		GameMatchLog: models.GameMatchLog{
+			GameMatchId: nowGameMatch.Id,
+			UserId:      roundUserDetail[nowGameMatch.BigBindPosition].UserId,
+			Operation:   models.GAME_OP_RAISE,
+			PointNumber: 10,
+		},
+	}
+	userOperationProcess <- uomsg2
+
+	//发送消息 通知小盲，大盲位置，已下注5 10
+	LimitPoint = 10
+	positionTurn = positionTurn + 1
+	if positionTurn > len(roundUserDetail) {
+		positionTurn = 1
+	}
+	if _, ok := roundUserDetail[positionTurn]; !ok {
+		positionTurn = nowGameMatch.SmallBindPosition
+	}
+	nextRoundInfo()
+}
+
+/**
+一局游戏的结束
+重新Init数据
+分配上局获胜点数
+**/
+func GameEnd() {
+	winPos := 0
+	winName := ""
+	winUserId := 0
+	if len(roundUserDetail) == 1 {
+		for key, v := range roundUserDetail {
+			winPos = key
+			winName = v.Name
+			winUserId = v.UserId
+		}
+	} else {
+		winPos, winName, winUserId = CalWinUser()
+	}
+	//计算获胜点数
+	nowGameMatch.PotAll = nowGameMatch.Pot1st + nowGameMatch.Pot2nd + nowGameMatch.Pot3rd + nowGameMatch.Pot4th
+	for _, v := range roundUserDetail {
+		nowGameMatch.PotAll += v.RoundPoint
+	}
+
+	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
+	models.UpdateGameMatchStatus(nowGameMatch, "pot1st")
+	models.UpdateGameMatchStatus(nowGameMatch, "pot2nd")
+	models.UpdateGameMatchStatus(nowGameMatch, "pot3rd")
+	models.UpdateGameMatchStatus(nowGameMatch, "pot4th")
+	models.UpdateGameMatchStatus(nowGameMatch, "pot_all")
+	models.ChangeUserPoint(winUserId, nowGameMatch.PotAll)
+	//提示胜利玩家可以重新开始游戏了
+	logs.Info("game end")
+	logs.Info(winPos)
+	logs.Info(winName)
+	//将内容初始化
+}
+
+func CalWinUser() (int, string, int) {
+	return 1, "suchot", 1
 }
