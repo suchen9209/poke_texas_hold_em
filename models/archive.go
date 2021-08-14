@@ -16,6 +16,7 @@ const (
 	EVENT_REFRESH_USER_INFO   //更新用户信息
 	EVENT_ROUND_INFO          //回合信息
 	EVENT_USER_OPERATION_INFO //用户操作信息
+	EVENT_GAME_END            //游戏结束
 )
 
 type UserType int

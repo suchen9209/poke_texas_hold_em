@@ -538,6 +538,7 @@ func GameEnd() {
 			winPos = key
 			winName = v.Name
 			winUserId = v.UserId
+			break
 		}
 	} else {
 		winPos, winName, winUserId = CalWinUser()
@@ -557,6 +558,12 @@ func GameEnd() {
 	models.ChangeUserPoint(winUserId, nowGameMatch.PotAll)
 	//提示胜利玩家可以重新开始游戏了
 	logs.Info("game end")
+	tmp_card := models.CardInfo{
+		Type: models.EVENT_CLEAR_CARD,
+	}
+	userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
+	sendMsgToSeat(tmp_card)
+	sendMsgToSeat(newEvent(models.EVENT_GAME_END, "system", "Game End"))
 	logs.Info(winPos)
 	logs.Info(winName)
 	//将内容初始化

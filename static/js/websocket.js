@@ -56,6 +56,7 @@ $(document).ready(function () {
 
             break;
         case 3://发牌
+            $('#start_game').hide();
             pos_str = "#pos" + data.Position;
             // $(pos_str + " .user_name").html(data.User);
             let card_html = get_card_html(data.Card.Color,data.Card.Value);
@@ -91,6 +92,11 @@ $(document).ready(function () {
                 }else{
                     $("#check").hide();
                 }
+                if(data.MaxPoint == 0){
+                    $("#call").hide(); 
+                }else{
+                    $("#call").show();
+                }
             }else{
                 $(".quantity").hide();
             }
@@ -98,7 +104,8 @@ $(document).ready(function () {
             + "<p>当前轮底池"+ data.AllPointInRound + "</p>"
             + "<p>当前位置"+ data.NowPosition + "</p>"
             + "<p>最小Point" + data.MaxPoint + "</p>"
-            + "<p>小盲"+ data.GM.BigBindPosition + "</p>"
+            + "<p>小盲"+ data.GM.SmallBindPosition + "</p>"
+            + "<p>大盲"+ data.GM.BigBindPosition + "</p>"
             + "<p>第一轮底池："+ data.GM.Pot1st + "</p>"
             + "<p>第二轮底池："+ data.GM.Pot2nd + "</p>"
             + "<p>第三轮底池："+ data.GM.Pot3rd + "</p>"
@@ -109,6 +116,11 @@ $(document).ready(function () {
         case 8://玩家操作
             var ophtml = "<p>"+ data.Name + " " + data.GameMatchLog.Operation + data.GameMatchLog.PointNumber + "</p>";
             $("#UserOp").append(ophtml);
+            break;
+        case 9://game end
+            $('#start_game').show();
+            $(".quantity").hide();
+            $("#UserOp").html("");
             break;
         }
 
