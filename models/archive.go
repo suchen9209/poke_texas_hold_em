@@ -53,6 +53,7 @@ type RoundInfo struct {
 	NowPosition     int
 	AllPointInRound int
 	MaxPoint        int
+	Detail          interface{}
 }
 
 type ClientMessage struct {

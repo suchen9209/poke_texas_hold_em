@@ -99,6 +99,8 @@ var (
 
 	emptySend = 0 //游戏结束时清零 仅用于记录大小盲
 	detailArr []models.InRoundUserDetail
+
+	roundCheckNumber = 0
 )
 
 // This function handles all incoming chan messages.
@@ -137,6 +139,7 @@ func chatroom() {
 				//初始化座位
 				detailArr = models.GetRoundUserDetail(1)
 				roundUserDetail = make(map[int]models.InRoundUserDetail)
+				logs.Info("init seat")
 				logs.Info(detailArr)
 				for _, v := range detailArr {
 					roundUserDetail[v.Position] = v
@@ -239,9 +242,12 @@ func chatroom() {
 		case roundInfo := <-roundprocess:
 			switch roundInfo.Type {
 			case models.EVENT_ROUND_INFO:
+				roundInfo.Detail = roundUserDetail[roundInfo.NowPosition]
+				roundInfo.AllPointInRound = getRoundPoint(nowGameMatch.GameStatus, false)
 				sendMsgToSeat(roundInfo)
 			}
 		case uop := <-userOperationProcess:
+			fromCheck := false
 			uop.GameMatchLog.GameMatchId = nowGameMatch.Id
 			switch uop.GameMatchLog.Operation {
 			case models.GAME_OP_RAISE:
@@ -259,6 +265,8 @@ func chatroom() {
 				roundUserDetail[uop.Position] = a
 				models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
 			case models.GAME_OP_CHECK:
+				roundCheckNumber++
+				fromCheck = true
 				//do nothing
 			case models.GAME_OP_ALLIN:
 				a := roundUserDetail[uop.Position]
@@ -283,29 +291,41 @@ func chatroom() {
 			}
 			models.AddGameMatchLog(uop.GameMatchLog)
 			sendMsgToSeat(uop)
+			logs.Info("after user operation")
+			logs.Info(roundUserDetail)
 			if len(roundUserDetail) <= 1 {
 				//game end
 			}
-			var have_not_fill_point bool
-			have_not_fill_point = false
-			for _, v := range roundUserDetail {
-				if v.RoundPoint != LimitPoint {
-					have_not_fill_point = true
-				}
-			}
-			logs.Info("after user operation")
-			logs.Info(roundUserDetail)
-			if have_not_fill_point {
-				//next user
-				emptySend++
-				if emptySend > 2 {
+			if fromCheck {
+				if roundCheckNumber < len(roundUserDetail) {
 					positionTurn = getNextPosition(roundUserDetail, positionTurn)
+				} else {
+					endRoundPoint()
+				}
+				nextRoundInfo()
+			} else {
+				var have_not_fill_point bool
+				have_not_fill_point = false
+				for _, v := range roundUserDetail {
+					if v.RoundPoint != LimitPoint {
+						have_not_fill_point = true
+					}
+				}
+
+				if have_not_fill_point {
+					//next user
+					emptySend++
+					if emptySend > 2 {
+						positionTurn = getNextPosition(roundUserDetail, positionTurn)
+						nextRoundInfo()
+					}
+				} else {
+					//end this round
+					endRoundPoint()
 					nextRoundInfo()
 				}
-			} else {
-				//end this round
-				endRoundPoint()
 			}
+
 		case sub := <-subscribe:
 			subscribers.PushBack(sub) // Add user to the end of list.
 			if sub.UserType == models.POKER_PLAYER {
@@ -345,7 +365,6 @@ func chatroom() {
 						}
 						break
 					}
-
 				}
 			}
 
@@ -412,14 +431,11 @@ func sendMsgToSeat(data interface{}) {
 //用于查找下一个位置的人，有则返回座位号，无则返回false
 func getNextPosition(m map[int]models.InRoundUserDetail, initpostition int) int {
 	user_number := len(detailArr)
-	logs.Info(user_number)
 	for i := initpostition + 1; i <= initpostition+user_number; i++ {
-		logs.Info(i)
 		key := i % user_number
 		if key == 0 {
 			key = user_number
 		}
-		logs.Info(key)
 		if _, ok := m[key]; ok {
 			return key
 		}
@@ -436,8 +452,12 @@ func nextRoundInfo() {
 	}
 }
 
+/**
+标志着一轮的结束
+**/
 func endRoundPoint() {
 
+	roundCheckNumber = 0
 	if _, ok := roundUserDetail[nowGameMatch.SmallBindPosition]; ok {
 		positionTurn = nowGameMatch.SmallBindPosition
 	} else {
@@ -445,29 +465,52 @@ func endRoundPoint() {
 	}
 	LimitPoint = 0
 	var nextRound string
-	for k, v := range roundUserDetail {
-		switch nowGameMatch.GameStatus {
-		case "ROUND1":
-			nextRound = "ROUND2"
-			nowGameMatch.Pot1st += v.RoundPoint
-		case "ROUND2":
-			nextRound = "ROUND3"
-			nowGameMatch.Pot2nd += v.RoundPoint
-		case "ROUND3":
-			nextRound = "ROUND4"
-			nowGameMatch.Pot3rd += v.RoundPoint
-		case "ROUND4":
-			nextRound = "END"
-			nowGameMatch.Pot4th += v.RoundPoint
-		}
-		a := roundUserDetail[k]
-		a.RoundPoint = 0
-		roundUserDetail[k] = a
-	}
-	if nowGameMatch.GameStatus == "ROUND4" {
+	switch nowGameMatch.GameStatus {
+	case "ROUND1":
+		nextRound = "ROUND2"
+		nowGameMatch.Pot1st = getRoundPoint(nowGameMatch.GameStatus, true)
+		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[1])
+		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[2])
+		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[3])
+	case "ROUND2":
+		nextRound = "ROUND3"
+		nowGameMatch.Pot2nd = getRoundPoint(nowGameMatch.GameStatus, true)
+		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[4])
+	case "ROUND3":
+		nextRound = "ROUND4"
+		nowGameMatch.Pot3rd = getRoundPoint(nowGameMatch.GameStatus, true)
+		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[5])
+	case "ROUND4":
+		nextRound = "END"
+		nowGameMatch.Pot4th = getRoundPoint(nowGameMatch.GameStatus, true)
 		nowGameMatch.PotAll = nowGameMatch.Pot1st + nowGameMatch.Pot2nd + nowGameMatch.Pot3rd + nowGameMatch.Pot4th
 	}
+
+	logs.Info("end round" + nowGameMatch.GameStatus)
 	nowGameMatch.GameStatus = nextRound
 
 	logs.Info(nowGameMatch)
+}
+
+func getRoundPoint(round string, clear bool) int {
+	var remainRoundPoint int
+	for k, v := range roundUserDetail {
+		remainRoundPoint += v.RoundPoint
+		if clear {
+			a := roundUserDetail[k]
+			a.RoundPoint = 0
+			roundUserDetail[k] = a
+		}
+	}
+	switch nowGameMatch.GameStatus {
+	case "ROUND1":
+		return nowGameMatch.Pot1st + remainRoundPoint
+	case "ROUND2":
+		return nowGameMatch.Pot2nd + remainRoundPoint
+	case "ROUND3":
+		return nowGameMatch.Pot3rd + remainRoundPoint
+	case "ROUND4":
+		return nowGameMatch.Pot4th + remainRoundPoint
+	}
+	return 0
 }

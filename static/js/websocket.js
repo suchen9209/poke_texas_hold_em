@@ -24,8 +24,10 @@ $(document).ready(function () {
         var data = JSON.parse(event.data);
         var li = document.createElement('li');
         let pos_str;
-
-        console.log(data);
+        if(data.Type != 3){
+            console.log(data);
+        }
+        
 
         switch (data.Type) {
         case 0: // JOIN
@@ -80,9 +82,33 @@ $(document).ready(function () {
             break;
         case 7://回合信息
             if(data.NowPosition == my_position){
-                alert("Your turn")
+                $("#your_turn").show();
+                $(".quantity").show(); 
+                $("#add_point").attr("min",data.MaxPoint)
+                $("#add_point").attr("max",data.Detail.Point)
+                if(data.MaxPoint <= data.Detail.RoundPoint){
+                    $("#check").show(); 
+                }else{
+                    $("#check").hide();
+                }
+            }else{
+                $(".quantity").hide();
             }
+            var roundhtml = "<p>"+data.GM.GameStatus+"</p>"
+            + "<p>当前轮底池"+ data.AllPointInRound + "</p>"
+            + "<p>当前位置"+ data.NowPosition + "</p>"
+            + "<p>最小Point" + data.MaxPoint + "</p>"
+            + "<p>小盲"+ data.GM.BigBindPosition + "</p>"
+            + "<p>第一轮底池："+ data.GM.Pot1st + "</p>"
+            + "<p>第二轮底池："+ data.GM.Pot2nd + "</p>"
+            + "<p>第三轮底池："+ data.GM.Pot3rd + "</p>"
+            + "<p>第四轮底池："+ data.GM.Pot4th + "</p>"
+            $("#RoundInfo").html(roundhtml);
             //渲染回合内容
+            break;
+        case 8://玩家操作
+            var ophtml = "<p>"+ data.Name + " " + data.GameMatchLog.Operation + data.GameMatchLog.PointNumber + "</p>";
+            $("#UserOp").append(ophtml);
             break;
         }
 
@@ -109,6 +135,7 @@ $(document).ready(function () {
         }
         let send_json = JSON.stringify(msg);
         socket.send(send_json);
+        $("#your_turn").hide();
     }
 
 
@@ -145,7 +172,8 @@ $(document).ready(function () {
     $('#raise').click(function () {
         //raise
         var add_point = $('#add_point').val();
-        postOperation('user_op','raise',add_point);
+        console.log(add_point)
+        postOperation('user_op','raise',parseInt(add_point));
     });
 
     

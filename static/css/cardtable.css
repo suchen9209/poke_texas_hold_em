@@ -117,3 +117,13 @@
     bottom: -1px;
     height: 50%;
   }
+
+  .fix_div{
+    position: absolute;
+    z-index: 2;
+    width: 355px;
+    height: 800px;
+    overflow: auto;
+    text-align: left;
+    top: 0px;
+  }

@@ -8,6 +8,10 @@
     <h3>{{i18n .Lang "username"}}: <span id="uname">{{.UserName}}</span></h3>
     <input type="hidden" id="user_id" value=""/>
     <input type="hidden" id="position" value=""/>
+    <div id="your_turn" class="row your_turn" style="margin-top:10px;display:none">
+        <h1>YOUR TURN</h1>
+    </div>
+
     <div class="quantity row">
         <input id="add_point" type="number" min="0" max="999999" step="5" value="0">
         <div class="quantity-nav">
@@ -100,5 +104,12 @@
     <ul id="chatbox">
         <li>{{i18n .Lang "welcome"}}</li>
     </ul>
+</div>
+
+<div id="RoundInfo" class="fix_div" style="left:0px">
+
+</div>
+<div id="UserOp" class="fix_div"  style="right:0px">
+
 </div>
 {{end}}
