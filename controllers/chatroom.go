@@ -458,10 +458,12 @@ func startGame() {
 
 	for ss := seat.Front(); ss != nil; ss = ss.Next() {
 		var tmp_poker = models.GetOneCard()
+		models.UsersCard[ss.Value.(Player).Position] = append(models.UsersCard[ss.Value.(Player).Position], *tmp_poker)
 		gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
 	}
 	for ss := seat.Front(); ss != nil; ss = ss.Next() {
 		var tmp_poker = models.GetOneCard()
+		models.UsersCard[ss.Value.(Player).Position] = append(models.UsersCard[ss.Value.(Player).Position], *tmp_poker)
 		gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
 	}
 
@@ -575,5 +577,26 @@ func GameEnd() {
 }
 
 func CalWinUser() (int, string, int) {
+	tmpCardC := make(map[int]string)
+	for k := range roundUserDetail {
+		tmpArr := models.UsersCard[k]
+		for _, v := range models.PublicCard {
+			tmpArr = append(tmpArr, v)
+		}
+		tmpCardC[k] = models.GetString(tmpArr)
+	}
+	var result int
+
+	result = models.Compare(tmpCardC[1], tmpCardC[2])
+	logs.Info(tmpCardC[1], tmpCardC[2])
+	logs.Info(result)
+	result = models.Compare(tmpCardC[2], tmpCardC[3])
+	logs.Info(tmpCardC[2], tmpCardC[3])
+	logs.Info(result)
+	result = models.Compare(tmpCardC[1], tmpCardC[3])
+	logs.Info(tmpCardC[1], tmpCardC[3])
+	logs.Info(result)
+	logs.Info(tmpCardC)
+
 	return 1, "suchot", 1
 }
