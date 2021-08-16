@@ -28,7 +28,6 @@ $(document).ready(function () {
             console.log(data);
         }
         
-
         switch (data.Type) {
         case 0: // JOIN
             if (data.User == uname) {
@@ -122,6 +121,47 @@ $(document).ready(function () {
             $(".quantity").hide();
             $("#UserOp").html("");
             break;
+        case 10://
+            $("#EndPanel").show();
+            var t10html = "";
+            for (let index = 0; index < data.WinPos.length; index++) {
+                const element = data.WinPos[index];
+                t10html += "<span>" + element + "</span>";
+            }
+            $("#winPos").html(t10html);
+            var card10html ="";
+            for (let index = 0; index < data.BigCard.length; index++) {
+                const element = data.BigCard[index];
+                card10html += get_card_html(element.Color,element.Value)
+            }
+            $("#bigCards").html(card10html);
+            var public10html ="";
+            for (let index = 0; index < data.PublicCard.length; index++) {
+                const element = data.PublicCard[index];
+                public10html += get_card_html(element.Color,element.Value)
+            }
+            $("#publicCard").html(public10html);
+        case 11:
+            
+        }
+        if(data.Type == undefined){
+            var uc11html = "";
+            uc11html += "pos1";
+            for (let index = 0; index < data[1].length; index++) {
+                const element = data[1][index];
+                uc11html += get_card_html(element.Color,element.Value)
+            }
+            uc11html += "pos2";
+            for (let index = 0; index < data[2].length; index++) {
+                const element = data[2][index];
+                uc11html += get_card_html(element.Color,element.Value)
+            }
+            uc11html += "pos3";
+            for (let index = 0; index < data[3].length; index++) {
+                const element = data[3][index];
+                uc11html += get_card_html(element.Color,element.Value)
+            }
+            $("#userCards").html(uc11html);
         }
 
         $('#chatbox li').first().before(li);

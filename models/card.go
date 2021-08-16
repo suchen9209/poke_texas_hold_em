@@ -94,6 +94,44 @@ func GetString(cardArr []Card) string {
 	return cardString
 }
 
+func StringToCard(s string) []Card {
+	var cc []Card
+	var ctmp Card
+	for i := 0; i < len(s); i++ {
+		if i%2 == 0 {
+			ctmp = Card{}
+			switch string(s[i]) {
+			case "T":
+				ctmp.Value = 10
+			case "J":
+				ctmp.Value = 11
+			case "Q":
+				ctmp.Value = 12
+			case "K":
+				ctmp.Value = 13
+			case "A":
+				ctmp.Value = 14
+			default:
+				ctmp.Value, _ = strconv.Atoi(string(s[i]))
+			}
+
+		} else {
+			switch string(s[i]) {
+			case "h":
+				ctmp.Color = HEART
+			case "d":
+				ctmp.Color = DIAMOND
+			case "s":
+				ctmp.Color = SPADE
+			case "c":
+				ctmp.Color = CLUB
+			}
+			cc = append(cc, ctmp)
+		}
+	}
+	return cc
+}
+
 // 花色对应编号
 var Suits = map[byte]int{
 	's': 3,
@@ -215,7 +253,7 @@ func (hand *Hand) getMaxHands() *MaxHand {
 func (maxHand *MaxHand) isStraightFlush(hand *Hand) bool {
 	var tempValue uint64
 	for i := 0; i < len(hand.Suits); i++ {
-		// 筛选相同花色牌个数，如果大于（5-赖子）则标记为同花
+		// 筛选相同花色牌个数，如果大于5则标记为同花
 		if cardNum := countOne(hand.Suits[i]); cardNum >= 5 {
 			maxHand.FlushFlag = true
 			maxHand.FlushSuit = i

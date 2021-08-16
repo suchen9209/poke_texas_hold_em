@@ -62,6 +62,14 @@ type UserPointSeat struct {
 	Point    int
 }
 
+type EndGameCardInfo struct {
+	Type       EventType
+	WinPos     []int
+	WinCard    [][]Card
+	PublicCard []Card
+	BigCard    []Card
+}
+
 const GAME_OP_RAISE = "raise"
 const GAME_OP_CALL = "call"
 const GAME_OP_CHECK = "check"

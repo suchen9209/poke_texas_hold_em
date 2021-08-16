@@ -532,29 +532,25 @@ func startGame() {
 分配上局获胜点数
 **/
 func GameEnd() {
-	winPos := 0
-	winName := ""
-	winUserId := 0
+	var winUserPos []int
 	if len(roundUserDetail) == 1 {
-		for key, v := range roundUserDetail {
-			winPos = key
-			winName = v.Name
-			winUserId = v.UserId
+		for key := range roundUserDetail {
+			winUserPos = append(winUserPos, key)
 			break
 		}
 	} else {
-		winPos, winName, winUserId = CalWinUser()
+		winUserPos = CalWinUser()
 	}
 	//计算获胜点数
-	logs.Info("game end ===  test ====")
-	logs.Info(nowGameMatch)
 	nowGameMatch.PotAll = nowGameMatch.Pot1st + nowGameMatch.Pot2nd + nowGameMatch.Pot3rd + nowGameMatch.Pot4th
-	logs.Info(nowGameMatch)
-	logs.Info(roundUserDetail)
 	for _, v := range roundUserDetail {
 		nowGameMatch.PotAll += v.RoundPoint
 	}
-	logs.Info(nowGameMatch)
+
+	perPot := nowGameMatch.PotAll / len(winUserPos)
+	for _, v := range winUserPos {
+		models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+	}
 
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 	models.UpdateGameMatchStatus(nowGameMatch, "pot1st")
@@ -562,7 +558,7 @@ func GameEnd() {
 	models.UpdateGameMatchStatus(nowGameMatch, "pot3rd")
 	models.UpdateGameMatchStatus(nowGameMatch, "pot4th")
 	models.UpdateGameMatchStatus(nowGameMatch, "pot_all")
-	models.ChangeUserPoint(winUserId, nowGameMatch.PotAll)
+
 	//提示胜利玩家可以重新开始游戏了
 	logs.Info("game end")
 	tmp_card := models.CardInfo{
@@ -571,32 +567,53 @@ func GameEnd() {
 	userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
 	sendMsgToSeat(tmp_card)
 	sendMsgToSeat(newEvent(models.EVENT_GAME_END, "system", "Game End"))
-	logs.Info(winPos)
-	logs.Info(winName)
-	//将内容初始化
+
 }
 
-func CalWinUser() (int, string, int) {
+func CalWinUser() []int {
 	tmpCardC := make(map[int]string)
+	bigString := ""
+	var winUser []int
 	for k := range roundUserDetail {
 		tmpArr := models.UsersCard[k]
 		for _, v := range models.PublicCard {
 			tmpArr = append(tmpArr, v)
 		}
 		tmpCardC[k] = models.GetString(tmpArr)
+		if bigString == "" {
+			bigString = models.GetString(tmpArr)
+			winUser = append(winUser, k)
+		}
 	}
-	var result int
 
-	result = models.Compare(tmpCardC[1], tmpCardC[2])
-	logs.Info(tmpCardC[1], tmpCardC[2])
-	logs.Info(result)
-	result = models.Compare(tmpCardC[2], tmpCardC[3])
-	logs.Info(tmpCardC[2], tmpCardC[3])
-	logs.Info(result)
-	result = models.Compare(tmpCardC[1], tmpCardC[3])
-	logs.Info(tmpCardC[1], tmpCardC[3])
-	logs.Info(result)
-	logs.Info(tmpCardC)
+	for k, v := range tmpCardC {
+		result := models.Compare(v, bigString)
+		if result == 1 {
+			winUser = winUser[0:0]
+			winUser = append(winUser, k)
+			bigString = v
+		} else if result == 0 {
+			winUser = append(winUser, k)
+		}
+	}
 
-	return 1, "suchot", 1
+	var winCard [][]models.Card
+	for _, v := range winUser {
+		winCard = append(winCard, models.UsersCard[v])
+	}
+	var tmp []models.Card
+	for _, v := range models.PublicCard {
+		tmp = append(tmp, v)
+	}
+	a := models.EndGameCardInfo{
+		Type:       models.EVENT_GAME_END_SHOW_CARD,
+		WinPos:     winUser,
+		WinCard:    winCard,
+		PublicCard: tmp,
+		BigCard:    models.StringToCard(bigString),
+	}
+	sendMsgToSeat(a)
+	sendMsgToSeat(models.UsersCard)
+
+	return winUser
 }
