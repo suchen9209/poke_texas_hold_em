@@ -297,6 +297,14 @@ func (maxHand *MaxHand) isStraightFlush(hand *Hand) bool {
 
 // 筛选四条 赖子最多三个，超过三个必为同花顺
 func (maxHand *MaxHand) isFourOfAKind(hand *Hand) bool {
+	//hand.Faces
+	//0000000000100		4	[3]
+	//0000000000101		3 	[2]
+	//0000000000101		2	[1]
+	//0000010000000		1	[0]
+
+	//1 0000000000100 0000000000100 0000000000100 0000000010100
+	//2 0000000000100 0000000000100 0000000000100 1000000000100
 	if hand.Faces[3] > 0 {
 		maxHand.MaxCase = FourOfAKind
 		maxHand.MaxHand = leftMoveAndAdd(hand.Faces[3], 4) | getFirstOne(hand.Faces[3]^hand.Faces[0])
@@ -307,6 +315,14 @@ func (maxHand *MaxHand) isFourOfAKind(hand *Hand) bool {
 
 // 筛选葫芦 赖子最多一个，超过一个必大于等于四条
 func (maxHand *MaxHand) isFullHouse(hand *Hand) bool {
+	//hand.Faces
+	//0000000000000		4	[3]
+	//0000000000101		3 	[2]
+	//0000000000101		2	[1]
+	//0000010000101		1	[0]
+
+	// 0000000000101 0000000000101 0000000000101
+	// 0000000000001 0000000000011 0000000000011
 	if hand.Faces[2] > 0 && countOne(hand.Faces[1]) >= 2 {
 		maxHand.MaxCase = FullHouse
 		firstOne := hand.Faces[2]
@@ -322,9 +338,10 @@ func (maxHand *MaxHand) isFlush(hand *Hand) bool {
 	if maxHand.FlushFlag {
 		var tempValue uint64
 		maxHand.MaxCase = Flush
-		tempValue = (hand.Suits[maxHand.FlushSuit] & AKQJT) ^ AKQJT            // 生成賴子可能放置的位置 例如 01110...
-		tempValue = deleteLastOne(tempValue, int(countOne(tempValue)))         // 确认賴子放置的位置 例如 01100...
-		tempValue = hand.Suits[maxHand.FlushSuit] | tempValue                  // 拼接賴子
+		// tempValue = (hand.Suits[maxHand.FlushSuit] & AKQJT) ^ AKQJT    // 生成賴子可能放置的位置 例如 01110...
+		// tempValue = deleteLastOne(tempValue, int(countOne(tempValue))) // 确认賴子放置的位置 例如 01100...
+		// tempValue = hand.Suits[maxHand.FlushSuit] | tempValue          // 拼接賴子
+		tempValue = hand.Suits[maxHand.FlushSuit]
 		maxHand.MaxHand = deleteLastOne(tempValue, int(countOne(tempValue)-5)) // 裁剪多余的1
 		return true
 	}
@@ -390,7 +407,8 @@ func findStraight(data uint64) uint64 {
 	// 定义模板模板,从最大顺子"AKQJT"开始依次与牌面做匹配,例:
 	// cardface	0000011011111    0000011011111    		  0000011011111    0000011011111
 	// cardMold 1111100000000 -> 0111110000000 -> ... ->  0000011111000 -> 0000000011111
-	// superCard											(有1赖子情况)		(无赖子情况)
+	// superCard
+	// 1000000001111										(有1赖子情况)		(无赖子情况)
 
 	cardMold = AKQJT
 	for cardMold >= 31 {
@@ -408,7 +426,9 @@ func findStraight(data uint64) uint64 {
 	return 0
 }
 
+// 10000000000  01111111111
 // 获取整形转二进制后最高位1的值 func(1011) -> 1000
+// 100000000 011111111
 func getFirstOne(data uint64) (result uint64) {
 	for data > 0 {
 		result = data
