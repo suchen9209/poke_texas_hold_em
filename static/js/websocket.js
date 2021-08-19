@@ -22,7 +22,7 @@ $(document).ready(function () {
     // Message received on the socket
     socket.onmessage = function (event) {
         var data = JSON.parse(event.data);
-        var li = document.createElement('li');
+        // var li = document.createElement('li');
         let pos_str;
         if(data.Type != 3){
             console.log(data);
@@ -40,19 +40,18 @@ $(document).ready(function () {
 
             break;
         case 1: // LEAVE
-            li.innerText = data.User + ' left the chat room.';
+            // li.innerText = data.User + ' left the chat room.';
             break;
         case 2: // MESSAGE
-            var username = document.createElement('strong');
-            var content = document.createElement('span');
+            // var username = document.createElement('strong');
+            // var content = document.createElement('span');
 
-            username.innerText = data.User;
-            content.innerText = data.Content;
+            // username.innerText = data.User;
+            // content.innerText = data.Content;
 
-            li.appendChild(username);
-            li.appendChild(document.createTextNode(': '));
-            li.appendChild(content);
-
+            // li.appendChild(username);
+            // li.appendChild(document.createTextNode(': '));
+            // li.appendChild(content);
             break;
         case 3://发牌
             $('#start_game').hide();
@@ -100,11 +99,11 @@ $(document).ready(function () {
                 $(".quantity").hide();
             }
             var roundhtml = "<p>"+data.GM.GameStatus+"</p>"
-            + "<p>当前轮底池"+ data.AllPointInRound + "</p>"
-            + "<p>当前位置"+ data.NowPosition + "</p>"
-            + "<p>最小Point" + data.MaxPoint + "</p>"
-            + "<p>小盲"+ data.GM.SmallBindPosition + "</p>"
-            + "<p>大盲"+ data.GM.BigBindPosition + "</p>"
+            + "<p>当前轮底池："+ data.AllPointInRound + "</p>"
+            + "<p>当前位置："+ data.NowPosition + "</p>"
+            + "<p>最小Point：" + data.MaxPoint + "</p>"
+            + "<p>小盲："+ data.GM.SmallBindPosition + "</p>"
+            + "<p>大盲："+ data.GM.BigBindPosition + "</p>"
             + "<p>第一轮底池："+ data.GM.Pot1st + "</p>"
             + "<p>第二轮底池："+ data.GM.Pot2nd + "</p>"
             + "<p>第三轮底池："+ data.GM.Pot3rd + "</p>"
@@ -113,8 +112,11 @@ $(document).ready(function () {
             //渲染回合内容
             break;
         case 8://玩家操作
-            var ophtml = "<p>"+ data.Name + " " + data.GameMatchLog.Operation + data.GameMatchLog.PointNumber + "</p>";
+            var ophtml = "<p>"+ data.Name + " " + data.GameMatchLog.Operation+ " " + data.GameMatchLog.PointNumber + "</p>";
             $("#UserOp").append(ophtml);
+            if(data.GameMatchLog.Operation == 'fold'){
+                $("#pos"+data.Position+" .container__status").addClass("container__status_not_onlie");
+            }
             break;
         case 9://game end
             $('#start_game').show();
@@ -164,7 +166,7 @@ $(document).ready(function () {
             $("#userCards").html(uc11html);
         }
 
-        $('#chatbox li').first().before(li);
+        // $('#chatbox li').first().before(li);
     };
 
     var postMsg = function (message,type){

@@ -1,3 +1,6 @@
+.container{
+  position: relative;
+}
 .container .position{
     position: relative;
     display: inline-grid;
@@ -126,4 +129,52 @@
     overflow: auto;
     text-align: left;
     top: 0px;
+    margin: 22px;
+    font-size: xx-large;
   }
+
+  .cards {
+    display: flex;
+
+    /* Put a card in the next row when previous cards take all width */
+    flex-wrap: wrap;
+
+    margin-left: -8px;
+    margin-right: -8px;
+}
+
+.cards__item {
+    /* There will be 4 cards per row */
+    flex-basis: 25%;
+
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: x-large;
+}
+
+.container .pos_number{
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: x-large;
+    font-family: auto;
+    margin-right: 5px;
+}
+
+.user_point{
+  color: mediumblue;
+}
+
+.container__status{
+  background-color: rgb(30, 255, 0);
+  border-radius: 9999px;
+  height: 8px;
+  width: 8px;
+  margin-right: 3px;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
+.container__status_not_onlie{
+  background-color: rgb(255, 0, 0);
+}
