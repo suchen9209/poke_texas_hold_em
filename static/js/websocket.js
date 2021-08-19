@@ -2,6 +2,7 @@ var socket;
 var my_position;
 var uname;
 var user_id;
+var round_status = "";
 
 function get_card_html(color,value){
     let html = '<div class="card">'+
@@ -98,6 +99,11 @@ $(document).ready(function () {
             }else{
                 $(".quantity").hide();
             }
+            if(round_status != data.GM.GameStatus && data.GM.GameStatus != 'END'){
+                var op7html = "<p>"+ data.GM.GameStatus+ "</p>";
+                $("#UserOp").append(op7html);
+            }
+            round_status = data.GM.GameStatus
             var roundhtml = "<p>"+data.GM.GameStatus+"</p>"
             + "<p>当前轮底池："+ data.AllPointInRound + "</p>"
             + "<p>当前位置："+ data.NowPosition + "</p>"
@@ -124,11 +130,15 @@ $(document).ready(function () {
             $("#UserOp").html("");
             break;
         case 10://
+            $(".container__status").removeClass("container__status_not_onlie");
+            $("#winPos").html("");
+            $("#bigCards").html("");
+            $("#publicCard").html("");
             $("#EndPanel").show();
             var t10html = "";
             for (let index = 0; index < data.WinPos.length; index++) {
                 const element = data.WinPos[index];
-                t10html += "<span>" + element + "</span>";
+                t10html += "<span>Winner is POS " + element + " !!!!</span>";
             }
             $("#winPos").html(t10html);
             var card10html ="";
@@ -246,6 +256,10 @@ $(document).ready(function () {
     $('#allin').click(function () {
         //check
         postOperation('user_op','allin',0);
+    });
+
+    $("#EndPanel").click(function(){
+        $("#EndPanel").hide();
     });
 
     $('.quantity').each(function() {

@@ -33,16 +33,14 @@ const (
 var cardMap map[int]Card
 var PublicCard map[int]Card
 var UsersCard map[int][]Card
-var GameMaxHand MaxHand
-var ShowMaxCard []Card
 
 func InitCardMap() {
-	cardMap = make(map[int]Card, 40)
+	cardMap = make(map[int]Card, 52)
 	PublicCard = make(map[int]Card)
 	UsersCard = make(map[int][]Card)
 	suitsArr := [4]string{HEART, DIAMOND, SPADE, CLUB}
 	index := 1
-	for i := POKER_NUMBER_6; i <= POKER_NUMBER_A; i++ {
+	for i := POKER_NUMBER_2; i <= POKER_NUMBER_A; i++ {
 		for _, v := range suitsArr {
 			poker := Card{Value: i, Color: v}
 			cardMap[index] = poker
@@ -134,70 +132,6 @@ func StringToCard(s string) []Card {
 	return cc
 }
 
-func TransMaxHandToCardInfo() {
-	ShowMaxCard = ShowMaxCard[0:0]
-	handint := GameMaxHand.MaxHand
-	switch GameMaxHand.MaxCase {
-	case StraightFlush:
-		initValue := 2
-		for handint > 0 {
-			if handint&1 == 1 {
-				ShowMaxCard = append(ShowMaxCard, Card{
-					Value: initValue,
-					Color: SuitsNum[GameMaxHand.FlushSuit],
-				})
-			}
-			initValue++
-			handint = handint >> 1
-		}
-	case FourOfAKind:
-		//0000000000100 0000000000100 0000000000100 1000000000000
-		firstuint := getFirstOne(GameMaxHand.MaxHand) >> (13 * 3)
-		fourCard := getCardValue(firstuint)
-		for _, v := range SuitsNum {
-			ShowMaxCard = append(ShowMaxCard, Card{
-				Value: fourCard,
-				Color: v,
-			})
-		}
-		tmpMaxHand := GameMaxHand.MaxHand
-		tmpMaxHand = tmpMaxHand ^ firstuint     //0000000000100 0000000000100 0000000000100 1000000000000
-		tmpMaxHand = AKQJT98765432 & tmpMaxHand //0000000000000 0000000000000 0000000000000 1000000000000
-
-		// 000000001000 s
-		// 100000001000 d
-		// 000000001000 c
-		// 000000001000 h
-		for k, v := range GameMaxHand.Handlog.Suits {
-			if v&tmpMaxHand > 0 {
-				ShowMaxCard = append(ShowMaxCard, Card{
-					Value: getCardValue(tmpMaxHand),
-					Color: SuitsNum[k],
-				})
-			}
-		}
-	}
-}
-
-func getCardValue(i uint64) int {
-	initValue := 2
-	for i > 0 {
-		if i&1 == 1 {
-			return initValue
-		}
-		initValue++
-		i = i >> 1
-	}
-	return 0
-}
-
-var SuitsNum = map[int]string{
-	3: SPADE,
-	2: HEART,
-	1: DIAMOND,
-	0: CLUB,
-}
-
 // 花色对应编号
 var Suits = map[byte]int{
 	's': 3,
@@ -236,12 +170,10 @@ const (
 )
 
 const (
-	// 特殊值        			AKQJT98765432
-	A2345         = 4111 // 1000000001111
-	A9876         = 4336 // 1000011110000
-	AKQJT         = 7936 // 1111100000000
-	A             = 4096 // 1000000000000
-	AKQJT98765432 = 8191 // 1111111111111
+	// 特殊值        AKQJT98765432
+	A2345 = 4111 // 1000000001111
+	AKQJT = 7936 // 1111100000000
+	A     = 4096 // 1000000000000
 )
 
 type Hand struct {
@@ -255,7 +187,6 @@ type MaxHand struct {
 	MaxHand   uint64 // 记录最大五张牌和得分（bit位记录牌，int值表示得分）
 	FlushFlag bool   // 记录是否存在同花牌型
 	FlushSuit int    // 如果有同花，记录同花的花色编号
-	Handlog   Hand
 }
 
 // 比较两张手牌、支持任意数量手牌及任意数量赖子
@@ -265,26 +196,13 @@ func Compare(strA string, strB string) int {
 
 	// 比较最大牌型
 	if winner := getWinner(playerA.MaxCase, playerB.MaxCase); winner != 0 {
-		if winner == 2 {
-			GameMaxHand = *playerB
-		}
-		if winner == 1 {
-			GameMaxHand = *playerB
-		}
 		return winner
 	}
 
 	// 顺子&同花顺存在“A2345”这一特殊情况，此时为最小顺子，需要手动标记（权值score设为0）
-	scoreA := If(playerA.MaxHand == A9876, uint64(0), playerA.MaxHand).(uint64)
-	scoreB := If(playerB.MaxHand == A9876, uint64(0), playerB.MaxHand).(uint64)
-	winner := getWinner(scoreA, scoreB)
-	if winner == 2 {
-		GameMaxHand = *playerB
-	}
-	if winner == 1 {
-		GameMaxHand = *playerB
-	}
-	return winner
+	scoreA := If(playerA.MaxHand == A2345, uint64(0), playerA.MaxHand).(uint64)
+	scoreB := If(playerB.MaxHand == A2345, uint64(0), playerB.MaxHand).(uint64)
+	return getWinner(scoreA, scoreB)
 }
 
 // 获取获胜者编号
@@ -341,7 +259,6 @@ func (hand *Hand) getMaxHands() *MaxHand {
 	} else if maxHand.isOnePair(hand) {
 	} else if maxHand.isHighCard(hand) {
 	}
-	maxHand.Handlog = *hand
 	return &maxHand
 }
 
@@ -502,7 +419,7 @@ func findStraight(data uint64) uint64 {
 	}
 
 	// 最后判断"A2345"这一特殊情况
-	cardMold = A9876
+	cardMold = A2345
 	if cardNum = countOne(data & cardMold); cardNum >= 5 {
 		return cardMold
 	}

@@ -178,3 +178,13 @@
 .container__status_not_onlie{
   background-color: rgb(255, 0, 0);
 }
+
+#EndPanel{
+  left: 330px;
+  width: 1242px;
+  text-align: center;
+  font-size: xx-large;
+  color: wheat;
+  background-image: url(/static/img/endbg.jpg);
+  display: none;
+}
