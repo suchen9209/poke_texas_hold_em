@@ -129,6 +129,7 @@ $(document).ready(function () {
             $(".quantity").hide();
             $("#UserOp").html("");
             $(".quantity").hide();
+            $(".container__status").removeClass("container__status_not_onlie");
             break;
         case 10://
             $(".container__status").removeClass("container__status_not_onlie");
@@ -159,21 +160,17 @@ $(document).ready(function () {
         }
         if(data.Type == undefined){
             var uc11html = "";
-            uc11html += "pos1";
-            for (let index = 0; index < data[1].length; index++) {
-                const element = data[1][index];
-                uc11html += get_card_html(element.Color,element.Value)
+            for (let index = 1; index <= 8; index++) {
+                if(data.hasOwnProperty(index)){
+                    uc11html += "pos" + index;
+                    for (let iii = 0; iii < data[index].length; iii++) {
+                        const element2 = data[index][iii];
+                        uc11html += get_card_html(element2.Color,element2.Value)
+                    }
+                }
+                
             }
-            uc11html += "pos2";
-            for (let index = 0; index < data[2].length; index++) {
-                const element = data[2][index];
-                uc11html += get_card_html(element.Color,element.Value)
-            }
-            uc11html += "pos3";
-            for (let index = 0; index < data[3].length; index++) {
-                const element = data[3][index];
-                uc11html += get_card_html(element.Color,element.Value)
-            }
+            
             $("#userCards").html(uc11html);
         }
 
