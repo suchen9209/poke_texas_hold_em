@@ -81,7 +81,7 @@ $(document).ready(function () {
             }
             break;
         case 7://回合信息
-            if(data.NowPosition == my_position){
+            if(data.NowPosition == my_position && data.GM.GameStatus != "END"){
                 $("#your_turn").show();
                 $(".quantity").show(); 
                 $("#add_point").attr("min",data.MaxPoint)
@@ -128,6 +128,7 @@ $(document).ready(function () {
             $('#start_game').show();
             $(".quantity").hide();
             $("#UserOp").html("");
+            $(".quantity").hide();
             break;
         case 10://
             $(".container__status").removeClass("container__status_not_onlie");

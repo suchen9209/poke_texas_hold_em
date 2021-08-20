@@ -587,6 +587,9 @@ func CalWinUser() []int {
 	}
 
 	for k, v := range tmpCardC {
+		if bigString == v {
+			continue
+		}
 		result := models.Compare(v, bigString)
 		if result == 1 {
 			winUser = winUser[0:0]

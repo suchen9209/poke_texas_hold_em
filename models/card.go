@@ -166,8 +166,9 @@ func TransMaxHandToCardInfo() {
 
 		findCardColor(GameMaxHand.Handlog.Suits, tmpMaxHand, true)
 	case FullHouse:
+		// 0000000010000 0000010010000 0000010010000
 		// 0000000000001 0000000000101 0000000000101
-		left13 := handint >> 13 * 2
+		left13 := handint >> 26
 		right13 := handint & AKQJT98765432
 		var threeValue, secondValue uint64
 		if countOne(left13) == 2 {
@@ -192,7 +193,7 @@ func TransMaxHandToCardInfo() {
 	case ThreeOfAKind:
 		// 0000000000001 0000000000001 0001000001001
 
-		left13 := handint >> 13 * 2
+		left13 := handint >> 26
 		right13 := handint & AKQJT98765432
 		right13 = right13 ^ left13
 		findCardColor(GameMaxHand.Handlog.Suits, left13, false)
