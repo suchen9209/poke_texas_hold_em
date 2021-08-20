@@ -299,3 +299,11 @@ $(document).ready(function () {
 
 
 });
+
+$(document).bind("keydown",function(e){   
+    e=window.event||e;
+    if(e.keyCode==116){
+    e.keyCode = 0;
+    return false; //屏蔽F5刷新键   
+    }
+ });

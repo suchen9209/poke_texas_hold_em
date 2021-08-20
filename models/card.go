@@ -1,6 +1,10 @@
 package models
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/beego/beego/v2/core/logs"
+)
 
 type Card struct {
 	Value int
@@ -137,8 +141,10 @@ func StringToCard(s string) []Card {
 func TransMaxHandToCardInfo() {
 	ShowMaxCard = ShowMaxCard[0:0]
 	handint := GameMaxHand.MaxHand
+	logs.Info(GameMaxHand)
+	logs.Info(ShowMaxCard)
 	switch GameMaxHand.MaxCase {
-	case StraightFlush:
+	case StraightFlush, Flush:
 		initValue := 2
 		for handint > 0 {
 			if handint&1 == 1 {
@@ -152,28 +158,112 @@ func TransMaxHandToCardInfo() {
 		}
 	case FourOfAKind:
 		//0000000000100 0000000000100 0000000000100 1000000000000
-		firstuint := getFirstOne(GameMaxHand.MaxHand) >> (13 * 3)
-		fourCard := getCardValue(firstuint)
-		for _, v := range SuitsNum {
-			ShowMaxCard = append(ShowMaxCard, Card{
-				Value: fourCard,
-				Color: v,
-			})
-		}
-		tmpMaxHand := GameMaxHand.MaxHand
+		firstuint := getFirstOne(handint) >> (13 * 3)
+		findCardColor(GameMaxHand.Handlog.Suits, firstuint, false)
+		tmpMaxHand := handint
 		tmpMaxHand = tmpMaxHand ^ firstuint     //0000000000100 0000000000100 0000000000100 1000000000000
 		tmpMaxHand = AKQJT98765432 & tmpMaxHand //0000000000000 0000000000000 0000000000000 1000000000000
 
-		// 000000001000 s
-		// 100000001000 d
-		// 000000001000 c
-		// 000000001000 h
-		for k, v := range GameMaxHand.Handlog.Suits {
-			if v&tmpMaxHand > 0 {
-				ShowMaxCard = append(ShowMaxCard, Card{
-					Value: getCardValue(tmpMaxHand),
-					Color: SuitsNum[k],
-				})
+		findCardColor(GameMaxHand.Handlog.Suits, tmpMaxHand, true)
+	case FullHouse:
+		// 0000000000001 0000000000101 0000000000101
+		left13 := handint >> 13 * 2
+		right13 := handint & AKQJT98765432
+		var threeValue, secondValue uint64
+		if countOne(left13) == 2 {
+			threeValue = getFirstOne(left13)
+			secondValue = getFirstOne(left13 ^ threeValue)
+		} else {
+			threeValue = getFirstOne(left13)
+			secondValue = getFirstOne(right13 ^ threeValue)
+		}
+		findCardColor(GameMaxHand.Handlog.Suits, threeValue, false)
+		findCardColor(GameMaxHand.Handlog.Suits, secondValue, false)
+	case Straight:
+		// 1000000001111
+		var initA uint64
+		initA = 4096 //1 0000 0000 0000
+		for initA > 0 {
+			if initA&handint > 0 {
+				findCardColor(GameMaxHand.Handlog.Suits, initA, true)
+			}
+			initA = initA >> 1
+		}
+	case ThreeOfAKind:
+		// 0000000000001 0000000000001 0001000001001
+
+		left13 := handint >> 13 * 2
+		right13 := handint & AKQJT98765432
+		right13 = right13 ^ left13
+		findCardColor(GameMaxHand.Handlog.Suits, left13, false)
+		var initA uint64
+		initA = 4096 //1 0000 0000 0000
+		for initA > 0 {
+			if initA&right13 > 0 {
+				findCardColor(GameMaxHand.Handlog.Suits, initA, true)
+			}
+			initA = initA >> 1
+		}
+	case TwoPair:
+		//1000000000001 1000000001001
+		left13 := handint >> 13
+		right13 := handint & AKQJT98765432
+		var initA uint64
+		initA = 4096 //1 0000 0000 0000
+		for initA > 0 {
+			if initA&left13 > 0 {
+				findCardColor(GameMaxHand.Handlog.Suits, initA, false)
+			}
+			initA = initA >> 1
+		}
+		lastCard := left13 ^ right13
+		findCardColor(GameMaxHand.Handlog.Suits, lastCard, true)
+	case OnePair:
+		//1000000000000 1000100001001
+		left13 := handint >> 13
+		right13 := handint & AKQJT98765432
+		var initA uint64
+		initA = 4096 //1 0000 0000 0000
+		for initA > 0 {
+			if initA&left13 > 0 {
+				findCardColor(GameMaxHand.Handlog.Suits, initA, false)
+			}
+			initA = initA >> 1
+		}
+		last3Card := left13 ^ right13 //0000100001001
+		initA = 4096                  //1 0000 0000 0000
+		for initA > 0 {
+			if initA&last3Card > 0 {
+				findCardColor(GameMaxHand.Handlog.Suits, initA, true)
+			}
+			initA = initA >> 1
+		}
+	case HighCard:
+		//1000010101010
+		var initA uint64
+		initA = 4096 //1 0000 0000 0000
+		for initA > 0 {
+			if initA&handint > 0 {
+				findCardColor(GameMaxHand.Handlog.Suits, initA, true)
+			}
+			initA = initA >> 1
+		}
+	}
+	logs.Info(ShowMaxCard)
+}
+
+func findCardColor(cardLog [4]uint64, cardUint uint64, onlyOne bool) {
+	for k, v := range GameMaxHand.Handlog.Suits {
+		if len(ShowMaxCard) == 5 {
+			break
+		}
+		if v&cardUint > 0 {
+			ShowMaxCard = append(ShowMaxCard, Card{
+				Value: getCardValue(cardUint),
+				Color: SuitsNum[k],
+			})
+			if onlyOne {
+				break
 			}
 		}
 	}
@@ -269,7 +359,7 @@ func Compare(strA string, strB string) int {
 			GameMaxHand = *playerB
 		}
 		if winner == 1 {
-			GameMaxHand = *playerB
+			GameMaxHand = *playerA
 		}
 		return winner
 	}
@@ -282,6 +372,9 @@ func Compare(strA string, strB string) int {
 		GameMaxHand = *playerB
 	}
 	if winner == 1 {
+		GameMaxHand = *playerA
+	}
+	if winner == 0 {
 		GameMaxHand = *playerB
 	}
 	return winner

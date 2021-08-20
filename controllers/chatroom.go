@@ -601,6 +601,8 @@ func CalWinUser() []int {
 	for _, v := range winUser {
 		winCard = append(winCard, models.UsersCard[v])
 	}
+
+	models.TransMaxHandToCardInfo()
 	var tmp []models.Card
 	for _, v := range models.PublicCard {
 		tmp = append(tmp, v)
@@ -610,7 +612,8 @@ func CalWinUser() []int {
 		WinPos:     winUser,
 		WinCard:    winCard,
 		PublicCard: tmp,
-		BigCard:    models.StringToCard(bigString),
+		// BigCard:    models.StringToCard(bigString),\
+		BigCard: models.ShowMaxCard,
 	}
 	sendMsgToSeat(a)
 	sendMsgToSeat(models.UsersCard)
