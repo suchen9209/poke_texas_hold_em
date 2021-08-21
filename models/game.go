@@ -68,14 +68,24 @@ type EndGameCardInfo struct {
 	WinCard    [][]Card
 	PublicCard []Card
 	BigCard    []Card
+	UserCards  map[int][]Card
 }
 
-const GAME_OP_RAISE = "raise"
-const GAME_OP_CALL = "call"
-const GAME_OP_CHECK = "check"
-const GAME_OP_FOLD = "fold"
-const GAME_OP_ALLIN = "allin"
-const GAMEUSERNUMBER = 8
+const (
+	GAME_OP_RAISE  = "raise"
+	GAME_OP_CALL   = "call"
+	GAME_OP_CHECK  = "check"
+	GAME_OP_FOLD   = "fold"
+	GAME_OP_ALLIN  = "allin"
+	GAMEUSERNUMBER = 8
+
+	GAME_STATUS_END       = "END"
+	GAME_STATUS_ROUND1    = "ROUND1"
+	GAME_STATUS_ROUND2    = "ROUND2"
+	GAME_STATUS_ROUND3    = "ROUND3"
+	GAME_STATUS_ROUND4    = "ROUND4"
+	GAME_STATUS_LICENSING = "LICENSING"
+)
 
 func SetUserReturnPlayer(u User) GameUser {
 	//如果已经存在，则直接返回位置
@@ -121,6 +131,10 @@ func SetUserReturnPlayer(u User) GameUser {
 
 func RemoveGameUser(uid int, gid int) {
 	o.QueryTable("game_user").Filter("game_id", gid).Filter("user_id", uid).Delete()
+}
+
+func TruncateGameUser() {
+	o.Raw("TRUNCATE game_user").Exec()
 }
 
 func GetUserPointWithSeat(gid int) []UserPointSeat {

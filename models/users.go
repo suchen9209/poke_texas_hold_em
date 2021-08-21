@@ -16,3 +16,18 @@ func CheckUser(name string) (*User, bool) {
 	return &user, can_login
 
 }
+
+func CheckUserInGame(name string) (*GameUser, bool) {
+	can_login := false
+	var user User
+	var gameUser GameUser
+	o.QueryTable("user").Filter("name", name).One(&user)
+	if user.Id > 0 {
+		o.QueryTable("game_user").Filter("user_id", user.Id).One(&gameUser)
+		if gameUser.Id > 0 {
+			return &gameUser, true
+		}
+	}
+	return &gameUser, can_login
+
+}

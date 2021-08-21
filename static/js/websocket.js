@@ -143,28 +143,24 @@ $(document).ready(function () {
                 t10html += "<span>Winner is POS " + element + " !!!!</span>";
             }
             $("#winPos").html(t10html);
-            var card10html ="";
+            var card10html ="Win Card:";
             for (let index = 0; index < data.BigCard.length; index++) {
                 const element = data.BigCard[index];
                 card10html += get_card_html(element.Color,element.Value)
             }
             $("#bigCards").html(card10html);
-            var public10html ="";
+            var public10html ="Public Card:";
             for (let index = 0; index < data.PublicCard.length; index++) {
                 const element = data.PublicCard[index];
                 public10html += get_card_html(element.Color,element.Value)
             }
             $("#publicCard").html(public10html);
-        case 11:
-            
-        }
-        if(data.Type == undefined){
             var uc11html = "";
             for (let index = 1; index <= 8; index++) {
-                if(data.hasOwnProperty(index)){
+                if(data.UserCards.hasOwnProperty(index)){
                     uc11html += "pos" + index;
-                    for (let iii = 0; iii < data[index].length; iii++) {
-                        const element2 = data[index][iii];
+                    for (let iii = 0; iii < data.UserCards[index].length; iii++) {
+                        const element2 = data.UserCards[index][iii];
                         uc11html += get_card_html(element2.Color,element2.Value)
                     }
                 }
@@ -172,6 +168,8 @@ $(document).ready(function () {
             }
             
             $("#userCards").html(uc11html);
+        case 11:
+            
         }
 
         // $('#chatbox li').first().before(li);

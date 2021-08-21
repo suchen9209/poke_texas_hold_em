@@ -63,10 +63,16 @@ func (w *WebSocketController) Join() {
 
 	user, reg := models.CheckUser(uname)
 	if reg {
-		Join(uname, ws, models.POKER_PLAYER, *user)
+		_, inGame := models.CheckUserInGame(uname)
+		if inGame {
+			Join(uname, ws, models.VIEWER, *user) //观战视角
+		} else {
+			Join(uname, ws, models.POKER_PLAYER, *user)
+		}
+
 	} else {
 		//游客退出暂无
-		Join(uname, ws, models.VIEWER, *user)
+		Join(uname, ws, models.VIEWER, *user) //观战视角
 	}
 
 	defer Leave(*user)

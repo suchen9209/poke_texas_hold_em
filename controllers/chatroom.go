@@ -59,6 +59,11 @@ type Player struct {
 	Conn     *websocket.Conn // Only for WebSocket users; otherwise nil.
 }
 
+type Viewer struct {
+	uname string
+	Conn  *websocket.Conn
+}
+
 type Subscriber struct {
 	Name     string
 	Conn     *websocket.Conn // Only for WebSocket users; otherwise nil.
@@ -101,6 +106,8 @@ var (
 	detailArr []models.InRoundUserDetail
 
 	roundCheckNumber = 0
+
+	viewerList = list.New()
 )
 
 // This function handles all incoming chan messages.
@@ -109,8 +116,9 @@ func chatroom() {
 		select {
 		case op := <-gameop:
 			if op == "start" {
-				startGame()
-
+				if nowGameMatch.Id == 0 || nowGameMatch.GameStatus == models.GAME_STATUS_END {
+					startGame()
+				}
 			}
 			if op == "show_card3" {
 				gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[1])
@@ -265,6 +273,12 @@ func chatroom() {
 					User:     sub.User.Name,
 				}
 			}
+			if sub.UserType == models.VIEWER {
+				var view = new(Viewer)
+				view.uname = sub.Name
+				view.Conn = sub.Conn
+				viewerList.PushBack(*view)
+			}
 			// Publish a JOIN event.
 			// publish <- newEvent(models.EVENT_JOIN, sub.Name, "")
 			logs.Info("User:", sub.Name, ";WebSocket:", sub.Conn != nil)
@@ -325,6 +339,7 @@ func chatroom() {
 }
 
 func init() {
+	models.TruncateGameUser()
 	go chatroom()
 }
 
@@ -345,6 +360,17 @@ func sendMsgToSeat(data interface{}) {
 			if ws.WriteMessage(websocket.TextMessage, msg) != nil {
 				// User disconnected.
 				unsubscribe <- ss.Value.(Player).user
+			}
+		}
+
+	}
+	for ss := viewerList.Front(); ss != nil; ss = ss.Next() {
+		ws := ss.Value.(Viewer).Conn
+		if ws != nil {
+			msg, _ := json.Marshal(data)
+			if ws.WriteMessage(websocket.TextMessage, msg) != nil {
+				// User disconnected.
+				viewerList.Remove(ss)
 			}
 		}
 
@@ -389,22 +415,22 @@ func endRoundPoint() {
 	LimitPoint = 0
 	var nextRound string
 	switch nowGameMatch.GameStatus {
-	case "ROUND1":
-		nextRound = "ROUND2"
+	case models.GAME_STATUS_ROUND1:
+		nextRound = models.GAME_STATUS_ROUND2
 		nowGameMatch.Pot1st = getRoundPoint(nowGameMatch.GameStatus, true)
 		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[1])
 		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[2])
 		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[3])
-	case "ROUND2":
-		nextRound = "ROUND3"
+	case models.GAME_STATUS_ROUND2:
+		nextRound = models.GAME_STATUS_ROUND3
 		nowGameMatch.Pot2nd = getRoundPoint(nowGameMatch.GameStatus, true)
 		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[4])
-	case "ROUND3":
-		nextRound = "ROUND4"
+	case models.GAME_STATUS_ROUND3:
+		nextRound = models.GAME_STATUS_ROUND4
 		nowGameMatch.Pot3rd = getRoundPoint(nowGameMatch.GameStatus, true)
 		gameprocess <- sendCard(models.EVENT_PUBLIC_CARD, "", 0, models.PublicCard[5])
-	case "ROUND4":
-		nextRound = "END"
+	case models.GAME_STATUS_ROUND4:
+		nextRound = models.GAME_STATUS_END
 		nowGameMatch.Pot4th = getRoundPoint(nowGameMatch.GameStatus, true)
 		nowGameMatch.PotAll = nowGameMatch.Pot1st + nowGameMatch.Pot2nd + nowGameMatch.Pot3rd + nowGameMatch.Pot4th
 	}
@@ -412,7 +438,7 @@ func endRoundPoint() {
 	logs.Info("end round" + nowGameMatch.GameStatus)
 	nowGameMatch.GameStatus = nextRound
 
-	if nowGameMatch.GameStatus == "END" {
+	if nowGameMatch.GameStatus == models.GAME_STATUS_END {
 		//需比较剩余玩家的卡牌大小
 		GameEnd()
 	}
@@ -448,7 +474,7 @@ func startGame() {
 	userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
 	nowGameMatch = models.InitGameMatch(1)
 	models.InitCardMap()
-	nowGameMatch.GameStatus = "LICENSING"
+	nowGameMatch.GameStatus = models.GAME_STATUS_LICENSING
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 
 	tmp_card := models.CardInfo{
@@ -471,7 +497,7 @@ func startGame() {
 		var tmp_poker = models.GetOneCard()
 		models.PublicCard[i] = *tmp_poker
 	}
-	nowGameMatch.GameStatus = "ROUND1"
+	nowGameMatch.GameStatus = models.GAME_STATUS_ROUND1
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 
 	//初始化座位
@@ -616,10 +642,10 @@ func CalWinUser() []int {
 		WinCard:    winCard,
 		PublicCard: tmp,
 		// BigCard:    models.StringToCard(bigString),\
-		BigCard: models.ShowMaxCard,
+		BigCard:   models.ShowMaxCard,
+		UserCards: models.UsersCard,
 	}
 	sendMsgToSeat(a)
-	sendMsgToSeat(models.UsersCard)
 
 	return winUser
 }
