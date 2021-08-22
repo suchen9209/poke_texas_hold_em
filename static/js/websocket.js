@@ -3,6 +3,7 @@ var my_position;
 var uname;
 var user_id;
 var round_status = "";
+var all_user_point =new Array(9);
 
 function get_card_html(color,value){
     let html = '<div class="card">'+
@@ -74,9 +75,10 @@ $(document).ready(function () {
             for (const key in info) {
                 if (Object.hasOwnProperty.call(info, key)) {
                     const element = info[key];
-                    let pos_str = "#pos" + info[key].Position;
-                    $(pos_str + " .user_name").html(info[key].Name);
-                    $(pos_str + " .user_point").html(info[key].Point);
+                    let pos_str = "#pos" + element.Position;
+                    $(pos_str + " .user_name").html(element.Name);
+                    $(pos_str + " .user_point").html(element.Point);
+                    all_user_point[element.Position] = element.Point;
                 }
             }
             break;
@@ -232,9 +234,12 @@ $(document).ready(function () {
 
     $('#raise').click(function () {
         //raise
-        var add_point = $('#add_point').val();
-        console.log(add_point)
-        postOperation('user_op','raise',parseInt(add_point));
+        var add_point = parseInt($('#add_point').val());
+        if(add_point <= 0 || add_point > all_user_point[my_position]){
+            alert("做个好人");
+        }else{
+            postOperation('user_op','raise',add_point);
+        }
     });
 
     

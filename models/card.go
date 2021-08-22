@@ -36,7 +36,9 @@ const (
 
 var cardMap map[int]Card
 var PublicCard map[int]Card
-var UsersCard map[int][]Card
+
+var UsersCard map[int][]Card // index:position  value:Card Arr
+
 var GameMaxHand MaxHand
 var ShowMaxCard []Card
 

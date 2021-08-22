@@ -108,6 +108,8 @@ var (
 	roundCheckNumber = 0
 
 	viewerList = list.New()
+
+	gameMatchAllin = make(map[int]int) //本局中allin的位置和point
 )
 
 // This function handles all incoming chan messages.
@@ -183,6 +185,9 @@ func chatroom() {
 			case models.GAME_OP_RAISE:
 				a := roundUserDetail[uop.Position]
 				a.RoundPoint = a.RoundPoint + uop.GameMatchLog.PointNumber
+				if a.Point < uop.GameMatchLog.PointNumber {
+					uop.GameMatchLog.PointNumber = a.Point
+				}
 				a.Point = a.Point - uop.GameMatchLog.PointNumber
 				roundUserDetail[uop.Position] = a
 				models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
@@ -191,10 +196,24 @@ func chatroom() {
 				a := roundUserDetail[uop.Position]
 				uop.GameMatchLog.PointNumber = LimitPoint - a.RoundPoint
 				a.RoundPoint = LimitPoint
+				if a.Point < uop.GameMatchLog.PointNumber {
+					uop.GameMatchLog.PointNumber = a.Point
+				}
 				a.Point = a.Point - uop.GameMatchLog.PointNumber
 				roundUserDetail[uop.Position] = a
 				models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
 			case models.GAME_OP_CHECK:
+				if LimitPoint > 0 {
+					a := roundUserDetail[uop.Position]
+					uop.GameMatchLog.PointNumber = LimitPoint - a.RoundPoint
+					a.RoundPoint = LimitPoint
+					if a.Point < uop.GameMatchLog.PointNumber {
+						uop.GameMatchLog.PointNumber = a.Point
+					}
+					a.Point = a.Point - uop.GameMatchLog.PointNumber
+					roundUserDetail[uop.Position] = a
+					models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
+				}
 				roundCheckNumber++
 				fromCheck = true
 				//do nothing
@@ -204,8 +223,11 @@ func chatroom() {
 				a.RoundPoint = userRePoint
 				a.Point = 0
 				roundUserDetail[uop.Position] = a
+				gameMatchAllin[uop.Position] = a.RoundPoint
 				models.ChangeUserPoint(a.UserId, -userRePoint)
-				LimitPoint = a.RoundPoint
+				if a.RoundPoint > LimitPoint {
+					LimitPoint = a.RoundPoint
+				}
 			case models.GAME_OP_FOLD:
 				switch nowGameMatch.GameStatus {
 				case "ROUND1":
@@ -238,16 +260,23 @@ func chatroom() {
 					var have_not_fill_point bool
 					have_not_fill_point = false
 					for _, v := range roundUserDetail {
-						if v.RoundPoint != LimitPoint {
+						_, ok := gameMatchAllin[v.Position]
+						if v.RoundPoint != LimitPoint && !ok {
 							have_not_fill_point = true
 						}
 					}
 
-					if have_not_fill_point {
+					if have_not_fill_point && len(roundUserDetail) > (len(gameMatchAllin)+1) {
 						//next user
 						emptySend++
 						if emptySend > 2 {
 							positionTurn = getNextPosition(roundUserDetail, positionTurn)
+							var ok bool
+							_, ok = gameMatchAllin[positionTurn]
+							for ok {
+								positionTurn = getNextPosition(roundUserDetail, positionTurn)
+								_, ok = gameMatchAllin[positionTurn]
+							}
 							nextRoundInfo()
 						}
 					} else {
@@ -474,6 +503,7 @@ func startGame() {
 	userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
 	nowGameMatch = models.InitGameMatch(1)
 	models.InitCardMap()
+	gameMatchAllin = make(map[int]int)
 	nowGameMatch.GameStatus = models.GAME_STATUS_LICENSING
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 
@@ -573,10 +603,19 @@ func GameEnd() {
 		nowGameMatch.PotAll += v.RoundPoint
 	}
 
+	// if len(winUserPos) == 1 {
+	// 	if all_point, pok := gameMatchAllin[winUserPos[0]]; pok {
+	// 		models.ChangeUserPoint(roundUserDetail[winUserPos[0]].UserId, all_point*2)
+
+	// 	} else {
+	// 		models.ChangeUserPoint(roundUserDetail[winUserPos[0]].UserId, nowGameMatch.PotAll)
+	// 	}
+	// } else {
 	perPot := nowGameMatch.PotAll / len(winUserPos)
 	for _, v := range winUserPos {
 		models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
 	}
+	// }
 
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 	models.UpdateGameMatchStatus(nowGameMatch, "pot1st")
