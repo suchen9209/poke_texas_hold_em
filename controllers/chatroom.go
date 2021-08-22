@@ -266,7 +266,9 @@ func chatroom() {
 						}
 					}
 
-					if have_not_fill_point && len(roundUserDetail) > (len(gameMatchAllin)+1) {
+					if len(roundUserDetail) == len(gameMatchAllin) {
+						GameEnd()
+					} else if have_not_fill_point && len(roundUserDetail) > (len(gameMatchAllin)+1) {
 						//next user
 						emptySend++
 						if emptySend > 2 {
