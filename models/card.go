@@ -173,7 +173,7 @@ func TransMaxHandToCardInfo() {
 		left13 := handint >> 26
 		right13 := handint & AKQJT98765432
 		var threeValue, secondValue uint64
-		if countOne(left13) == 2 {
+		if CountOne(left13) == 2 {
 			threeValue = getFirstOne(left13)
 			secondValue = getFirstOne(left13 ^ threeValue)
 		} else {
@@ -457,7 +457,7 @@ func (maxHand *MaxHand) isStraightFlush(hand *Hand) bool {
 	var tempValue uint64
 	for i := 0; i < len(hand.Suits); i++ {
 		// 筛选相同花色牌个数，如果大于5则标记为同花
-		if cardNum := countOne(hand.Suits[i]); cardNum >= 5 {
+		if cardNum := CountOne(hand.Suits[i]); cardNum >= 5 {
 			maxHand.FlushFlag = true
 			maxHand.FlushSuit = i
 			// 再用检查是否有顺子，若有则标记为同花顺
@@ -502,7 +502,7 @@ func (maxHand *MaxHand) isFullHouse(hand *Hand) bool {
 
 	// 0000000000101 0000000000101 0000000000101
 	// 0000000000001 0000000000011 0000000000011
-	if hand.Faces[2] > 0 && countOne(hand.Faces[1]) >= 2 {
+	if hand.Faces[2] > 0 && CountOne(hand.Faces[1]) >= 2 {
 		maxHand.MaxCase = FullHouse
 		firstOne := hand.Faces[2]
 		secondOne := getFirstOne(hand.Faces[2] ^ hand.Faces[1])
@@ -521,7 +521,7 @@ func (maxHand *MaxHand) isFlush(hand *Hand) bool {
 		// tempValue = deleteLastOne(tempValue, int(countOne(tempValue))) // 确认賴子放置的位置 例如 01100...
 		// tempValue = hand.Suits[maxHand.FlushSuit] | tempValue          // 拼接賴子
 		tempValue = hand.Suits[maxHand.FlushSuit]
-		maxHand.MaxHand = deleteLastOne(tempValue, int(countOne(tempValue)-5)) // 裁剪多余的1
+		maxHand.MaxHand = deleteLastOne(tempValue, int(CountOne(tempValue)-5)) // 裁剪多余的1
 		return true
 	}
 	return false
@@ -549,7 +549,7 @@ func (maxHand *MaxHand) isThreeOfAKind(hand *Hand) bool {
 
 // 筛选两对 不可能有赖子
 func (maxHand *MaxHand) isTwoPair(hand *Hand) bool {
-	if countOne := countOne(hand.Faces[1]); countOne >= 2 {
+	if countOne := CountOne(hand.Faces[1]); countOne >= 2 {
 		var tempValue uint64
 		maxHand.MaxCase = TwoPair
 		tempValue = deleteLastOne(hand.Faces[1], int(countOne-2)) // 有可能有三对，剔除多余的对子
@@ -591,7 +591,7 @@ func findStraight(data uint64) uint64 {
 
 	cardMold = AKQJT
 	for cardMold >= 31 {
-		if cardNum = countOne(data & cardMold); cardNum >= 5 {
+		if cardNum = CountOne(data & cardMold); cardNum >= 5 {
 			return cardMold
 		}
 		cardMold = cardMold >> 1
@@ -599,7 +599,7 @@ func findStraight(data uint64) uint64 {
 
 	// 最后判断"A2345"这一特殊情况
 	cardMold = A9876
-	if cardNum = countOne(data & cardMold); cardNum >= 5 {
+	if cardNum = CountOne(data & cardMold); cardNum >= 5 {
 		return cardMold
 	}
 	return 0
@@ -635,7 +635,7 @@ func leftMoveAndAdd(data uint64, moveCount int) (result uint64) {
 }
 
 // 统计二进制中1的个数（最大有效位数为16位）
-func countOne(a uint64) uint64 {
+func CountOne(a uint64) uint64 {
 	// 这里用了分治思想：先将相邻两个比特位１的个数相加，再将相邻四各比特位值相加...
 	// 0000 0001 1000 0101
 	// 0000 0000 1000 0000  +  0000 0001 0000 0101	&

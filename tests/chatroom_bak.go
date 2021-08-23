@@ -266,7 +266,7 @@ func chatroom() {
 						}
 					}
 
-					if !have_not_fill_point && (len(roundUserDetail)-len(gameMatchAllin) <= 1) {
+					if len(roundUserDetail) == len(gameMatchAllin) {
 						GameEnd()
 					} else if have_not_fill_point && len(roundUserDetail) > (len(gameMatchAllin)+1) {
 						//next user
@@ -605,15 +605,6 @@ func GameEnd() {
 		nowGameMatch.PotAll += v.RoundPoint
 	}
 
-	if len(gameMatchAllin) > 0 {
-
-	} else {
-		perPot := nowGameMatch.PotAll / len(winUserPos)
-		for _, v := range winUserPos {
-			models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
-		}
-	}
-
 	// if len(winUserPos) == 1 {
 	// 	if all_point, pok := gameMatchAllin[winUserPos[0]]; pok {
 	// 		models.ChangeUserPoint(roundUserDetail[winUserPos[0]].UserId, all_point*2)
@@ -622,7 +613,10 @@ func GameEnd() {
 	// 		models.ChangeUserPoint(roundUserDetail[winUserPos[0]].UserId, nowGameMatch.PotAll)
 	// 	}
 	// } else {
-
+	perPot := nowGameMatch.PotAll / len(winUserPos)
+	for _, v := range winUserPos {
+		models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+	}
 	// }
 
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
@@ -695,37 +689,4 @@ func CalWinUser() []int {
 	sendMsgToSeat(a)
 
 	return winUser
-}
-
-//传入当前仍在场的用户
-func GetBigUser(iru map[int]models.InRoundUserDetail) (uint64, string) {
-	tmpCardC := make(map[int]string)
-	bigString := ""
-	var winUser uint64
-	for k := range iru {
-		tmpArr := models.UsersCard[k]
-		for _, v := range models.PublicCard {
-			tmpArr = append(tmpArr, v)
-		}
-		tmpCardC[k] = models.GetString(tmpArr)
-		if bigString == "" {
-			bigString = models.GetString(tmpArr)
-			winUser = 1 << k
-		}
-	}
-
-	for k, v := range tmpCardC {
-		if bigString == v {
-			continue
-		}
-		result := models.Compare(v, bigString)
-		if result == 1 {
-			winUser = 1 << k
-			bigString = v
-		} else if result == 0 {
-			winUser |= 1 << k
-		}
-	}
-
-	return winUser, bigString
 }
