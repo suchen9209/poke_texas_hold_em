@@ -143,8 +143,6 @@ func StringToCard(s string) []Card {
 func TransMaxHandToCardInfo() {
 	ShowMaxCard = ShowMaxCard[0:0]
 	handint := GameMaxHand.MaxHand
-	logs.Info(GameMaxHand)
-	logs.Info(ShowMaxCard)
 	switch GameMaxHand.MaxCase {
 	case StraightFlush, Flush:
 		initValue := 2

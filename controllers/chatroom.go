@@ -220,7 +220,7 @@ func chatroom() {
 			case models.GAME_OP_ALLIN:
 				a := roundUserDetail[uop.Position]
 				userRePoint := models.GetUserPoint(a.UserId)
-				a.RoundPoint = userRePoint
+				a.RoundPoint = userRePoint + a.RoundPoint
 				a.Point = 0
 				roundUserDetail[uop.Position] = a
 				gameMatchAllin[uop.Position] = a.RoundPoint
@@ -243,8 +243,8 @@ func chatroom() {
 			}
 			models.AddGameMatchLog(uop.GameMatchLog)
 			sendMsgToSeat(uop)
-			logs.Info("after user operation")
-			logs.Info(roundUserDetail)
+			// logs.Info("after user operation")
+			// logs.Info(roundUserDetail)
 			if len(roundUserDetail) <= 1 {
 				//game end
 				GameEnd()
@@ -535,12 +535,12 @@ func startGame() {
 	//初始化座位
 	detailArr = models.GetRoundUserDetail(1)
 	roundUserDetail = make(map[int]models.InRoundUserDetail)
-	logs.Info("init seat")
-	logs.Info(detailArr)
+	// logs.Info("init seat")
+	// logs.Info(detailArr)
 	for _, v := range detailArr {
 		roundUserDetail[v.Position] = v
 	}
-	logs.Info(roundUserDetail)
+	// logs.Info(roundUserDetail)
 
 	//小盲
 	positionTurn = nowGameMatch.SmallBindPosition
@@ -590,6 +590,7 @@ func startGame() {
 分配上局获胜点数
 **/
 func GameEnd() {
+	var pointDetail = make(map[int]int)
 	var winUserPos []int
 	if len(roundUserDetail) == 1 {
 		for key := range roundUserDetail {
@@ -606,11 +607,45 @@ func GameEnd() {
 	}
 
 	if len(gameMatchAllin) > 0 {
+		potAll := nowGameMatch.PotAll                           //总池
+		all_in_point_desc := models.RankByPoint(gameMatchAllin) //根据allin数量进行的排序
+		var cal_user_detail = roundUserDetail
+		cal_all_in_pot := 0 //已结算的allin底池
+		logs.Info(potAll)
+		logs.Info(all_in_point_desc)
+		logs.Info(cal_user_detail)
+		logs.Info(cal_all_in_pot)
+		for _, v := range all_in_point_desc {
+			logs.Info(v)
+			need_cal_pot := (v.Value - cal_all_in_pot) * len(cal_user_detail)
+			win_user, _ := GetBigUser(cal_user_detail)
+			perPot := need_cal_pot / len(win_user)
+			for _, v := range win_user {
+				models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+				pointDetail[v] = perPot
+			}
+			cal_all_in_pot = v.Value
+			potAll -= need_cal_pot
+			delete(cal_user_detail, v.Key)
+			logs.Info(need_cal_pot)
+			logs.Info(perPot)
+			logs.Info(cal_all_in_pot)
+			logs.Info(potAll)
+		}
+		if potAll > 0 { //cal_user_detail中还剩余多个未allin玩家时未出现
+			win_user, _ := GetBigUser(cal_user_detail)
+			perPot := potAll / len(win_user)
+			for _, v := range win_user {
+				models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+				pointDetail[v] = perPot
+			}
+		}
 
 	} else {
 		perPot := nowGameMatch.PotAll / len(winUserPos)
 		for _, v := range winUserPos {
 			models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+			pointDetail[v] = perPot
 		}
 	}
 
@@ -698,7 +733,7 @@ func CalWinUser() []int {
 }
 
 //传入当前仍在场的用户
-func GetBigUser(iru map[int]models.InRoundUserDetail) (uint64, string) {
+func GetBigUser(iru map[int]models.InRoundUserDetail) ([]int, string) {
 	tmpCardC := make(map[int]string)
 	bigString := ""
 	var winUser uint64
@@ -727,5 +762,15 @@ func GetBigUser(iru map[int]models.InRoundUserDetail) (uint64, string) {
 		}
 	}
 
-	return winUser, bigString
+	var winUserArr []int
+	i := 1
+	for winUser > 0 {
+		if winUser&1 > 0 {
+			winUserArr = append(winUserArr, i)
+		}
+		winUser = winUser >> 1
+		i++
+	}
+
+	return winUserArr, bigString
 }

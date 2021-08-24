@@ -9,7 +9,7 @@ func RankByPoint(m map[int]int) PosList {
 		pl[i] = Pos{k, v}
 		i++
 	}
-	sort.Sort(sort.Reverse(pl))
+	sort.Sort(pl)
 	return pl
 }
 

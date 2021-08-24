@@ -100,8 +100,8 @@ func (w *WebSocketController) Join() {
 					PointNumber: data.Point,
 				},
 			}
-			logs.Info("user op")
-			logs.Info(top)
+			// logs.Info("user op")
+			// logs.Info(top)
 			userOperationProcess <- top
 		}
 
