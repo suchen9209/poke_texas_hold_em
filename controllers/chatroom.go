@@ -110,6 +110,8 @@ var (
 	viewerList = list.New()
 
 	gameMatchAllin = make(map[int]int) //本局中allin的位置和point
+
+	foldPoint = make(map[string]int)
 )
 
 // This function handles all incoming chan messages.
@@ -174,72 +176,48 @@ func chatroom() {
 		case roundInfo := <-roundprocess:
 			switch roundInfo.Type {
 			case models.EVENT_ROUND_INFO:
+				tmp := roundUserDetail[roundInfo.NowPosition]
+				tmp.AllowOp = tmp.AllowOp[0:0]
+				if LimitPoint == 0 {
+					tmp.AllowOp = append(tmp.AllowOp, "check")
+				}
+				if tmp.RoundPoint+tmp.Point >= LimitPoint && LimitPoint > 0 {
+					tmp.AllowOp = append(tmp.AllowOp, "call")
+				}
+				if tmp.RoundPoint+tmp.Point > LimitPoint {
+					tmp.AllowOp = append(tmp.AllowOp, "raise")
+				}
+				tmp.AllowOp = append(tmp.AllowOp, "allin")
+				tmp.AllowOp = append(tmp.AllowOp, "fold")
+
+				roundUserDetail[roundInfo.NowPosition] = tmp
 				roundInfo.Detail = roundUserDetail[roundInfo.NowPosition]
 				roundInfo.AllPointInRound = getRoundPoint(nowGameMatch.GameStatus, false)
 				sendMsgToSeat(roundInfo)
 			}
 		case uop := <-userOperationProcess:
+			emptySend++
 			fromCheck := false
 			uop.GameMatchLog.GameMatchId = nowGameMatch.Id
 			switch uop.GameMatchLog.Operation {
-			case models.GAME_OP_RAISE:
-				a := roundUserDetail[uop.Position]
-				a.RoundPoint = a.RoundPoint + uop.GameMatchLog.PointNumber
-				if a.Point < uop.GameMatchLog.PointNumber {
-					uop.GameMatchLog.PointNumber = a.Point
-				}
-				a.Point = a.Point - uop.GameMatchLog.PointNumber
-				roundUserDetail[uop.Position] = a
-				models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
-				LimitPoint = a.RoundPoint
-			case models.GAME_OP_CALL:
-				a := roundUserDetail[uop.Position]
-				uop.GameMatchLog.PointNumber = LimitPoint - a.RoundPoint
-				a.RoundPoint = LimitPoint
-				if a.Point < uop.GameMatchLog.PointNumber {
-					uop.GameMatchLog.PointNumber = a.Point
-				}
-				a.Point = a.Point - uop.GameMatchLog.PointNumber
-				roundUserDetail[uop.Position] = a
-				models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
-			case models.GAME_OP_CHECK:
-				if LimitPoint > 0 {
-					a := roundUserDetail[uop.Position]
-					uop.GameMatchLog.PointNumber = LimitPoint - a.RoundPoint
-					a.RoundPoint = LimitPoint
-					if a.Point < uop.GameMatchLog.PointNumber {
-						uop.GameMatchLog.PointNumber = a.Point
-					}
-					a.Point = a.Point - uop.GameMatchLog.PointNumber
-					roundUserDetail[uop.Position] = a
-					models.ChangeUserPoint(a.UserId, -uop.GameMatchLog.PointNumber)
-				}
+			case models.GAME_OP_RAISE: //raise
+				opChangePoint(uop.GameMatchLog.PointNumber, uop.Position)
+			case models.GAME_OP_CALL: //call
+				uop.GameMatchLog.PointNumber = LimitPoint - roundUserDetail[uop.Position].RoundPoint
+				opChangePoint(uop.GameMatchLog.PointNumber, uop.Position)
+			case models.GAME_OP_CHECK: //check
 				roundCheckNumber++
 				fromCheck = true
-				//do nothing
-			case models.GAME_OP_ALLIN:
-				a := roundUserDetail[uop.Position]
-				userRePoint := models.GetUserPoint(a.UserId)
-				a.RoundPoint = userRePoint + a.RoundPoint
-				a.Point = 0
-				roundUserDetail[uop.Position] = a
-				gameMatchAllin[uop.Position] = a.RoundPoint
-				models.ChangeUserPoint(a.UserId, -userRePoint)
-				if a.RoundPoint > LimitPoint {
-					LimitPoint = a.RoundPoint
-				}
+			case models.GAME_OP_ALLIN: // allin
+				userRePoint := models.GetUserPoint(roundUserDetail[uop.Position].UserId)
+				uop.GameMatchLog.PointNumber = userRePoint
+				opChangePoint(uop.GameMatchLog.PointNumber, uop.Position)
+				gameMatchAllin[uop.Position] = roundUserDetail[uop.Position].RoundPoint
 			case models.GAME_OP_FOLD:
-				switch nowGameMatch.GameStatus {
-				case "ROUND1":
-					nowGameMatch.Pot1st = nowGameMatch.Pot1st + roundUserDetail[uop.Position].RoundPoint
-				case "ROUND2":
-					nowGameMatch.Pot2nd = nowGameMatch.Pot2nd + roundUserDetail[uop.Position].RoundPoint
-				case "ROUND3":
-					nowGameMatch.Pot3rd = nowGameMatch.Pot3rd + roundUserDetail[uop.Position].RoundPoint
-				case "ROUND4":
-					nowGameMatch.Pot4th = nowGameMatch.Pot4th + roundUserDetail[uop.Position].RoundPoint
-				}
+				foldPoint[nowGameMatch.GameStatus] += roundUserDetail[uop.Position].RoundPoint
+				logs.Info(foldPoint)
 				delete(roundUserDetail, uop.Position)
+				delete(models.UsersCard, uop.Position)
 			}
 			models.AddGameMatchLog(uop.GameMatchLog)
 			sendMsgToSeat(uop)
@@ -261,17 +239,16 @@ func chatroom() {
 					have_not_fill_point = false
 					for _, v := range roundUserDetail {
 						_, ok := gameMatchAllin[v.Position]
-						if v.RoundPoint != LimitPoint && !ok {
+						if v.RoundPoint < LimitPoint && !ok {
 							have_not_fill_point = true
 						}
 					}
 
 					if !have_not_fill_point && (len(roundUserDetail)-len(gameMatchAllin) <= 1) {
 						GameEnd()
-					} else if have_not_fill_point && len(roundUserDetail) > (len(gameMatchAllin)+1) {
+					} else if have_not_fill_point {
 						//next user
-						emptySend++
-						if emptySend > 2 {
+						if emptySend > 2 { //只是为了排除大小盲
 							positionTurn = getNextPosition(roundUserDetail, positionTurn)
 							var ok bool
 							_, ok = gameMatchAllin[positionTurn]
@@ -286,6 +263,27 @@ func chatroom() {
 						endRoundPoint()
 						nextRoundInfo()
 					}
+
+					// if !have_not_fill_point && (len(roundUserDetail)-len(gameMatchAllin) <= 1) {
+					// 	GameEnd()
+					// } else if have_not_fill_point && len(roundUserDetail) > (len(gameMatchAllin)+1) {
+					// 	//next user
+					// 	emptySend++
+					// 	if emptySend > 2 {
+					// 		positionTurn = getNextPosition(roundUserDetail, positionTurn)
+					// 		var ok bool
+					// 		_, ok = gameMatchAllin[positionTurn]
+					// 		for ok {
+					// 			positionTurn = getNextPosition(roundUserDetail, positionTurn)
+					// 			_, ok = gameMatchAllin[positionTurn]
+					// 		}
+					// 		nextRoundInfo()
+					// 	}
+					// } else {
+					// 	//end this round
+					// 	endRoundPoint()
+					// 	nextRoundInfo()
+					// }
 				}
 			}
 		case sub := <-subscribe:
@@ -366,6 +364,17 @@ func chatroom() {
 				}
 			}
 		}
+	}
+}
+
+func opChangePoint(point int, position int) {
+	a := roundUserDetail[position]
+	a.RoundPoint = a.RoundPoint + point
+	a.Point = a.Point - point
+	roundUserDetail[position] = a
+	models.ChangeUserPoint(a.UserId, -point)
+	if a.RoundPoint > LimitPoint {
+		LimitPoint = a.RoundPoint
 	}
 }
 
@@ -463,7 +472,6 @@ func endRoundPoint() {
 	case models.GAME_STATUS_ROUND4:
 		nextRound = models.GAME_STATUS_END
 		nowGameMatch.Pot4th = getRoundPoint(nowGameMatch.GameStatus, true)
-		nowGameMatch.PotAll = nowGameMatch.Pot1st + nowGameMatch.Pot2nd + nowGameMatch.Pot3rd + nowGameMatch.Pot4th
 	}
 
 	logs.Info("end round" + nowGameMatch.GameStatus)
@@ -487,6 +495,13 @@ func getRoundPoint(round string, clear bool) int {
 			roundUserDetail[k] = a
 		}
 	}
+	remainRoundPoint += foldPoint[nowGameMatch.GameStatus]
+	if clear {
+		foldPoint[nowGameMatch.GameStatus] = 0
+	}
+	logs.Info(foldPoint)
+	logs.Info(remainRoundPoint)
+
 	switch nowGameMatch.GameStatus {
 	case "ROUND1":
 		return nowGameMatch.Pot1st + remainRoundPoint
@@ -506,6 +521,7 @@ func startGame() {
 	nowGameMatch = models.InitGameMatch(1)
 	models.InitCardMap()
 	gameMatchAllin = make(map[int]int)
+	foldPoint = make(map[string]int)
 	nowGameMatch.GameStatus = models.GAME_STATUS_LICENSING
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 
@@ -605,40 +621,66 @@ func GameEnd() {
 	for _, v := range roundUserDetail {
 		nowGameMatch.PotAll += v.RoundPoint
 	}
+	logs.Info(foldPoint)
+	for _, v := range foldPoint {
+		nowGameMatch.PotAll += v
+	}
 
 	if len(gameMatchAllin) > 0 {
 		potAll := nowGameMatch.PotAll                           //总池
 		all_in_point_desc := models.RankByPoint(gameMatchAllin) //根据allin数量进行的排序
-		var cal_user_detail = roundUserDetail
+		var cal_user_detail = make(map[int]models.InRoundUserDetail)
+		for k, v := range roundUserDetail {
+			cal_user_detail[k] = v
+		}
 		cal_all_in_pot := 0 //已结算的allin底池
+
 		logs.Info(potAll)
 		logs.Info(all_in_point_desc)
 		logs.Info(cal_user_detail)
 		logs.Info(cal_all_in_pot)
+
 		for _, v := range all_in_point_desc {
+
 			logs.Info(v)
+
 			need_cal_pot := (v.Value - cal_all_in_pot) * len(cal_user_detail)
 			win_user, _ := GetBigUser(cal_user_detail)
 			perPot := need_cal_pot / len(win_user)
 			for _, v := range win_user {
 				models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
-				pointDetail[v] = perPot
+				pointDetail[v] += perPot
 			}
 			cal_all_in_pot = v.Value
 			potAll -= need_cal_pot
 			delete(cal_user_detail, v.Key)
+
 			logs.Info(need_cal_pot)
 			logs.Info(perPot)
 			logs.Info(cal_all_in_pot)
 			logs.Info(potAll)
 		}
+		logs.Info(pointDetail)
 		if potAll > 0 { //cal_user_detail中还剩余多个未allin玩家时未出现
-			win_user, _ := GetBigUser(cal_user_detail)
-			perPot := potAll / len(win_user)
-			for _, v := range win_user {
-				models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
-				pointDetail[v] = perPot
+			var win_user2 []int
+			logs.Info(cal_user_detail)
+			logs.Info(len(cal_user_detail))
+			logs.Info(len(cal_user_detail) > 0)
+			logs.Info(roundUserDetail)
+			if len(cal_user_detail) > 0 {
+				win_user2, _ = GetBigUser(cal_user_detail)
+			} else {
+				win_user2, _ = GetBigUser(roundUserDetail)
 			}
+			logs.Info(win_user2)
+
+			perPot := potAll / len(win_user2)
+			logs.Info(roundUserDetail)
+			for _, v := range win_user2 {
+				models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+				pointDetail[v] += perPot
+			}
+			logs.Info(pointDetail)
 		}
 
 	} else {
@@ -660,6 +702,7 @@ func GameEnd() {
 
 	// }
 
+	nowGameMatch.GameStatus = models.GAME_STATUS_END
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 	models.UpdateGameMatchStatus(nowGameMatch, "pot1st")
 	models.UpdateGameMatchStatus(nowGameMatch, "pot2nd")
@@ -737,6 +780,7 @@ func GetBigUser(iru map[int]models.InRoundUserDetail) ([]int, string) {
 	tmpCardC := make(map[int]string)
 	bigString := ""
 	var winUser uint64
+	logs.Info(iru)
 	for k := range iru {
 		tmpArr := models.UsersCard[k]
 		for _, v := range models.PublicCard {
@@ -747,6 +791,7 @@ func GetBigUser(iru map[int]models.InRoundUserDetail) ([]int, string) {
 			bigString = models.GetString(tmpArr)
 			winUser = 1 << k
 		}
+		logs.Info(winUser)
 	}
 
 	for k, v := range tmpCardC {
@@ -760,10 +805,11 @@ func GetBigUser(iru map[int]models.InRoundUserDetail) ([]int, string) {
 		} else if result == 0 {
 			winUser |= 1 << k
 		}
+		logs.Info(winUser)
 	}
 
 	var winUserArr []int
-	i := 1
+	i := 0
 	for winUser > 0 {
 		if winUser&1 > 0 {
 			winUserArr = append(winUserArr, i)
@@ -771,6 +817,7 @@ func GetBigUser(iru map[int]models.InRoundUserDetail) ([]int, string) {
 		winUser = winUser >> 1
 		i++
 	}
+	logs.Info(winUserArr)
 
 	return winUserArr, bigString
 }

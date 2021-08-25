@@ -83,23 +83,18 @@ $(document).ready(function () {
             }
             break;
         case 7://回合信息
+            $(".quantity button").hide();
+            $(".quantity").hide();
             if(data.NowPosition == my_position && data.GM.GameStatus != "END"){
                 $("#your_turn").show();
                 $(".quantity").show(); 
-                $("#add_point").attr("min",data.MaxPoint)
-                $("#add_point").attr("max",data.Detail.Point)
-                if(data.MaxPoint <= data.Detail.RoundPoint){
-                    $("#check").show(); 
-                }else{
-                    $("#check").hide();
-                }
-                if(data.MaxPoint == 0){
-                    $("#call").hide(); 
-                }else{
-                    $("#call").show();
-                }
-            }else{
-                $(".quantity").hide();
+                for (const key in data.Detail.AllowOp) {
+                    $("#"+data.Detail.AllowOp[key]).show(); 
+                    if(data.Detail.AllowOp[key] == 'raise'){
+                        $("#add_point").attr("min",data.MaxPoint)
+                        $("#add_point").attr("max",data.Detail.Point)
+                    }
+                } 
             }
             if(round_status != data.GM.GameStatus && data.GM.GameStatus != 'END'){
                 var op7html = "<p>"+ data.GM.GameStatus+ "</p>";
