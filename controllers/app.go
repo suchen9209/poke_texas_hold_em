@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"poke/models"
 	"strings"
 
 	"github.com/beego/beego/v2/core/logs"
@@ -81,4 +82,13 @@ func (a *AppController) Join() {
 
 	a.Redirect("/ws?uname="+uname, 302)
 
+}
+
+func (a *AppController) GreedIsGood() {
+
+	uname := a.GetString("uname")
+	u, _ := models.CheckUser(uname)
+	models.ChangeUserPoint(u.Id, 1000)
+
+	a.TplName = "greedisgood.html"
 }

@@ -79,6 +79,9 @@ $(document).ready(function () {
                     $(pos_str + " .user_name").html(element.Name);
                     $(pos_str + " .user_point").html(element.Point);
                     all_user_point[element.Position] = element.Point;
+                    if(element.Position == my_position && element.Point <= 0){
+                        $("#greedisgood").show();
+                    }
                 }
             }
             break;
@@ -252,6 +255,10 @@ $(document).ready(function () {
     $('#allin').click(function () {
         //check
         postOperation('user_op','allin',0);
+    });
+
+    $("#greedisgood").click(function(){
+        $("#greedisgood").hide();
     });
 
     $("#EndPanel").click(function(){

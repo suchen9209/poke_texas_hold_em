@@ -287,30 +287,35 @@ func chatroom() {
 				}
 			}
 		case sub := <-subscribe:
-			subscribers.PushBack(sub) // Add user to the end of list.
-			if sub.UserType == models.POKER_PLAYER {
-				gu := models.SetUserReturnPlayer(sub.User)
+			if nowGameMatch.Id != 0 && nowGameMatch.GameStatus != models.GAME_STATUS_END {
+				sub.Conn.WriteMessage(websocket.TextMessage, []byte("wait Game End"))
+			} else {
+				subscribers.PushBack(sub) // Add user to the end of list.
+				if sub.UserType == models.POKER_PLAYER {
+					gu := models.SetUserReturnPlayer(sub.User)
 
-				var player = new(Player)
-				player.user = sub.User
-				player.Position = gu.Position
-				player.Conn = sub.Conn
-				seat.PushBack(*player)
-				publish <- models.SeatInfo{
-					Type:     models.EVENT_JOIN,
-					GameUser: gu,
-					User:     sub.User.Name,
+					var player = new(Player)
+					player.user = sub.User
+					player.Position = gu.Position
+					player.Conn = sub.Conn
+					seat.PushBack(*player)
+					publish <- models.SeatInfo{
+						Type:     models.EVENT_JOIN,
+						GameUser: gu,
+						User:     sub.User.Name,
+					}
+				}
+				if sub.UserType == models.VIEWER {
+					var view = new(Viewer)
+					view.uname = sub.Name
+					view.Conn = sub.Conn
+					viewerList.PushBack(*view)
 				}
 			}
-			if sub.UserType == models.VIEWER {
-				var view = new(Viewer)
-				view.uname = sub.Name
-				view.Conn = sub.Conn
-				viewerList.PushBack(*view)
-			}
+
 			// Publish a JOIN event.
 			// publish <- newEvent(models.EVENT_JOIN, sub.Name, "")
-			logs.Info("User:", sub.Name, ";WebSocket:", sub.Conn != nil)
+			// logs.Info("User:", sub.Name, ";WebSocket:", sub.Conn != nil)
 		case event := <-publish:
 			// Notify waiting list.
 			for ch := waitingList.Back(); ch != nil; ch = ch.Prev() {
@@ -346,6 +351,7 @@ func chatroom() {
 			for ss := seat.Front(); ss != nil; ss = ss.Next() {
 				if ss.Value.(Player).user == unsub {
 					seat.Remove(ss)
+					delete(roundUserDetail, ss.Value.(Player).Position)
 					models.RemoveGameUser(unsub.Id, 1)
 					// Clone connection.
 					ws := ss.Value.(Player).Conn
