@@ -8,9 +8,11 @@ import (
 
 func init() {
 	// Register routers.
-	beego.Router("/", &controllers.AppController{})
+	beego.Router("/", &controllers.AppController{}, "get:Index")
+	beego.Router("/room", &controllers.AppController{})
 	// Indicate AppController.Join method to handle POST requests.
 	beego.Router("/join", &controllers.AppController{}, "post:Join")
+	beego.Router("/login", &controllers.AppController{}, "post:Login")
 
 	beego.Router("/greedisgood", &controllers.AppController{}, "get:GreedIsGood")
 

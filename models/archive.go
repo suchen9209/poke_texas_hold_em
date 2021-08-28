@@ -68,6 +68,12 @@ type ClientMessage struct {
 	Name      string
 }
 
+type JsonData struct {
+	Code int
+	Msg  string
+	Data interface{}
+}
+
 const archiveSize = 20
 
 // Event archives.

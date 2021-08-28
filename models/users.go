@@ -1,9 +1,18 @@
 package models
 
 type User struct {
-	Id    int    `form:"-"`
-	Name  string `form:"name"`
-	Point int    `form:"-"`
+	Id       int    `form:"-"`
+	Name     string `form:"name"`
+	Point    int    `form:"-"`
+	Password string ``
+}
+
+func CheckUserLogin(user *User) error {
+	var e error
+	if len(user.Password) > 0 && len(user.Name) > 0 {
+		e = o.Read(user, "Name", "Password")
+	}
+	return e
 }
 
 func CheckUser(name string) (*User, bool) {

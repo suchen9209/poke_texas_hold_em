@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"crypto/md5"
+	"fmt"
 	"poke/models"
 	"strings"
 
@@ -64,9 +66,38 @@ type AppController struct {
 	baseController // Embed to use methods that are implemented in baseController.
 }
 
+func (a *AppController) Index() {
+	a.TplName = "login.html"
+}
+
 // Get implemented Get() method for AppController.
 func (a *AppController) Get() {
 	a.TplName = "welcome.html"
+}
+
+func (a *AppController) Login() {
+	uname := a.GetString("uname")
+	pwd := a.GetString("password")
+
+	salt, _ := beego.AppConfig.String("password_salt")
+
+	u := models.User{
+		Name:     uname,
+		Password: fmt.Sprintf("%x", md5.Sum([]byte(pwd+salt))),
+	}
+	models.CheckUserLogin(&u)
+	if u.Id > 0 {
+		a.SetSession("uid", u.Id)
+		a.SetSession("uname", u.Name)
+		a.SetSession("USER", u)
+		a.Redirect("/ws", 302)
+	}
+	a.Redirect("/", 302)
+	// a.Data["json"] = models.JsonData{
+	// 	Code: 400,
+	// 	Msg:  e.Error(),
+	// }
+	// a.ServeJSON()
 }
 
 // Join method handles POST requests for AppController.
