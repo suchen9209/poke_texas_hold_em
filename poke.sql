@@ -44,7 +44,7 @@ CREATE TABLE `game_match` (
   `game_status` enum('INIT','LICENSING','ROUND1','ROUND2','ROUND3','ROUND4','END') DEFAULT NULL,
   `create_time` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=306 DEFAULT CHARSET=utf8;
 
 /*Table structure for table `game_match_log` */
 
@@ -58,7 +58,7 @@ CREATE TABLE `game_match_log` (
   `point_number` int(11) DEFAULT NULL,
   `add_time` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=2211 DEFAULT CHARSET=utf8mb4;
 
 /*Table structure for table `game_user` */
 
@@ -73,7 +73,7 @@ CREATE TABLE `game_user` (
   `online` tinyint(4) DEFAULT 1 COMMENT '1为在线',
   PRIMARY KEY (`id`),
   UNIQUE KEY `user_id` (`user_id`,`game_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=29 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 
 /*Table structure for table `user` */
 
@@ -82,9 +82,11 @@ DROP TABLE IF EXISTS `user`;
 CREATE TABLE `user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
   `point` int(11) DEFAULT NULL,
   `create_time` datetime DEFAULT current_timestamp(),
   `update_time` datetime DEFAULT current_timestamp(),
+  `last_login_time` datetime DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
