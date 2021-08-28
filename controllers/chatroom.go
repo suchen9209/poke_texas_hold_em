@@ -113,6 +113,8 @@ var (
 	gameMatchAllin = make(map[int]int) //本局中allin的位置和point
 
 	foldPoint = make(map[string]int)
+
+	BigBindPositionTurn = 0
 )
 
 // This function handles all incoming chan messages.
@@ -121,7 +123,7 @@ func chatroom() {
 		select {
 		case op := <-gameop:
 			if op == "start" {
-				if nowGameMatch.Id == 0 || nowGameMatch.GameStatus == models.GAME_STATUS_END {
+				if (nowGameMatch.Id == 0 || nowGameMatch.GameStatus == models.GAME_STATUS_END) && seat.Len() >= 2 {
 					startGame()
 				}
 			}
@@ -200,6 +202,9 @@ func chatroom() {
 			emptySend++
 			fromCheck := false
 			uop.GameMatchLog.GameMatchId = nowGameMatch.Id
+			if uop.Position == nowGameMatch.BigBindPosition {
+				BigBindPositionTurn++
+			}
 			switch uop.GameMatchLog.Operation {
 			case models.GAME_OP_RAISE: //raise
 				opChangePoint(uop.GameMatchLog.PointNumber, uop.Position)
@@ -244,6 +249,9 @@ func chatroom() {
 						if v.RoundPoint < LimitPoint && !ok {
 							have_not_fill_point = true
 						}
+					}
+					if BigBindPositionTurn <= 1 { //只在第一轮中有效
+						have_not_fill_point = true
 					}
 
 					if !have_not_fill_point && (len(roundUserDetail)-len(gameMatchAllin) <= 1) {
@@ -368,6 +376,12 @@ func chatroom() {
 						},
 						User: unsub.Name,
 					} // Publish a LEAVE event.
+					if seat.Len() == 1 {
+						GameEnd()
+					}
+					if seat.Len() == 0 {
+						nowGameMatch.GameStatus = "END"
+					}
 					break
 				}
 			}
@@ -531,6 +545,7 @@ func startGame() {
 	models.InitCardMap()
 	gameMatchAllin = make(map[int]int)
 	foldPoint = make(map[string]int)
+	BigBindPositionTurn = 0
 	nowGameMatch.GameStatus = models.GAME_STATUS_LICENSING
 	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
 
