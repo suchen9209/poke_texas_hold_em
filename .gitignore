@@ -3,3 +3,5 @@ lastupdate.tmp
 go.sum
 go.mod
 conf/app.conf
+poker/
+puker-css-sprites/
