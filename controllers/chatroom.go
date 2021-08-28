@@ -109,6 +109,7 @@ var (
 
 	viewerList = list.New()
 
+	// gameMatchPointLog = make(map[int]map[string]int)
 	gameMatchAllin = make(map[int]int) //本局中allin的位置和point
 
 	foldPoint = make(map[string]int)
@@ -221,6 +222,7 @@ func chatroom() {
 			}
 			models.AddGameMatchLog(uop.GameMatchLog)
 			sendMsgToSeat(uop)
+			userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
 			// logs.Info("after user operation")
 			// logs.Info(roundUserDetail)
 			if len(roundUserDetail) <= 1 {
@@ -382,6 +384,7 @@ func opChangePoint(point int, position int) {
 	if a.RoundPoint > LimitPoint {
 		LimitPoint = a.RoundPoint
 	}
+	// gameMatchPointLog[position][nowGameMatch.GameStatus] += point
 }
 
 func init() {
@@ -577,6 +580,7 @@ func startGame() {
 			PointNumber: 5,
 		},
 	}
+	// gameMatchPointLog[positionTurn][models.GAME_STATUS_ROUND1] = 5
 	userOperationProcess <- uomsg
 
 	//大盲
@@ -592,6 +596,7 @@ func startGame() {
 			PointNumber: 10,
 		},
 	}
+	// gameMatchPointLog[positionTurn][models.GAME_STATUS_ROUND1] = 10
 	userOperationProcess <- uomsg2
 
 	//发送消息 通知小盲，大盲位置，已下注5 10
@@ -673,12 +678,13 @@ func GameEnd() {
 			logs.Info(len(cal_user_detail))
 			logs.Info(len(cal_user_detail) > 0)
 			logs.Info(roundUserDetail)
-			if len(cal_user_detail) > 0 {
-				win_user2, _ = GetBigUser(cal_user_detail)
-			} else {
-				win_user2, _ = GetBigUser(roundUserDetail)
-			}
+			// if len(cal_user_detail) > 0 {
+			// 	win_user2, _ = GetBigUser(cal_user_detail)
+			// } else {
+			// 	win_user2, _ = GetBigUser(roundUserDetail)
+			// }
 			logs.Info(win_user2)
+			win_user2, _ = GetBigUser(roundUserDetail)
 
 			perPot := potAll / len(win_user2)
 			logs.Info(roundUserDetail)
