@@ -20,7 +20,7 @@ function show_op_button(){
 $(document).ready(function () {
     // Create a socket
     uname = $('#uname').text()
-    socket = new WebSocket('ws://' + window.location.host + '/ws/join');
+    socket = new WebSocket('ws://' + window.location.host + '/ws/join?uname='+uname);
     // Message received on the socket
     socket.onmessage = function (event) {
         var data = JSON.parse(event.data);
