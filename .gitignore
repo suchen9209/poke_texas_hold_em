@@ -5,3 +5,6 @@ go.mod
 conf/app.conf
 poker/
 puker-css-sprites/
+.idea/vcs.xml
+.idea/poke.iml
+.idea/modules.xml
