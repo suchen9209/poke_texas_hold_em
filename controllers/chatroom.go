@@ -671,6 +671,9 @@ func GameEnd() {
 			logs.Info(v)
 
 			need_cal_pot := (v.Value - cal_all_in_pot) * len(cal_user_detail)
+			if need_cal_pot > potAll{
+			    need_cal_pot = potAll
+			}
 			win_user, _ := GetBigUser(cal_user_detail)
 			perPot := need_cal_pot / len(win_user)
 			for _, v := range win_user {
