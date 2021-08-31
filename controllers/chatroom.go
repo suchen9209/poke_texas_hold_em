@@ -713,7 +713,7 @@ func GameEnd() {
 			logs.Info(pointDetail)
 		}
 
-	} else {
+	} else if len(winUserPos) > 0{
 		perPot := nowGameMatch.PotAll / len(winUserPos)
 		for _, v := range winUserPos {
 			models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)

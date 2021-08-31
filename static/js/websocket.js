@@ -1,9 +1,10 @@
-var socket;
-var my_position;
-var uname;
-var user_id;
-var round_status = "";
-var all_user_point =new Array(9);
+let socket;
+let my_position;
+let uname;
+let user_id;
+let round_status = "";
+const all_user_point = new Array(9);
+let round_min_limit = 0;
 
 function get_card_html(color,value){
     let html = '<div class="card">'+
@@ -57,6 +58,11 @@ $(document).ready(function () {
             break;
         case 3://发牌
             $('#start_game').hide();
+            if (data.Position === my_position){
+                let card_html = get_card_html(data.Card.Color,data.Card.Value);
+                $("#user_card_detail").append(card_html)
+
+            }
             pos_str = "#pos" + data.Position;
             // $(pos_str + " .user_name").html(data.User);
             let card_html = get_card_html(data.Card.Color,data.Card.Value);
@@ -69,30 +75,35 @@ $(document).ready(function () {
         case 5://清理场面上的牌
             $(".user_card").html("")
             $("#public_card_table").html("")
+            $("#user_card_detail").html("")
             break;
         case 6://更新用户信息
             let info = data.Info;
+            let user_point_html = "";
             for (const key in info) {
                 if (Object.hasOwnProperty.call(info, key)) {
                     const element = info[key];
+                    user_point_html = user_point_html + "<p>Pos: "+ element.Position + " "+" Name: "+element.Name+" Point: "+element.Point +"</p>";
+                    $("#RoundInfo").html(roundhtml);
                     let pos_str = "#pos" + element.Position;
                     $(pos_str + " .user_name").html(element.Name);
                     $(pos_str + " .user_point").html(element.Point);
                     all_user_point[element.Position] = element.Point;
-                    if(element.Position == my_position && element.Point <= 0){
+                    if(element.Position === my_position && element.Point <= 0){
                         $("#greedisgood").show();
                     }
                 }
             }
+            $("#UserPoint").html(user_point_html);
             break;
         case 7://回合信息
-            $(".quantity button").hide();
+            $(".quantity button").removeClass("enable").addClass("unable");
             $(".quantity").hide();
-            if(data.NowPosition == my_position && data.GM.GameStatus != "END"){
+            if(data.NowPosition === my_position && data.GM.GameStatus != "END"){
                 $("#your_turn").show();
                 $(".quantity").show(); 
                 for (const key in data.Detail.AllowOp) {
-                    $("#"+data.Detail.AllowOp[key]).show(); 
+                    $("#"+data.Detail.AllowOp[key]).removeClass("unable").addClass("enable");
                     if(data.Detail.AllowOp[key] == 'raise'){
                         $("#add_point").attr("min",data.MaxPoint)
                         $("#add_point").attr("max",data.Detail.Point)
@@ -104,6 +115,7 @@ $(document).ready(function () {
                 $("#UserOp").append(op7html);
             }
             round_status = data.GM.GameStatus
+            round_min_limit = data.MaxPoint - data.Detail.RoundPoint
             var roundhtml = "<p>"+data.GM.GameStatus+"</p>"
             + "<p>当前轮底池："+ data.AllPointInRound + "</p>"
             + "<p>当前位置："+ data.NowPosition + "</p>"
@@ -227,34 +239,44 @@ $(document).ready(function () {
 
     $('#call').click(function () {
         //call
-        postOperation('user_op','call',0);
+        if($(this).hasClass("enable")){
+            postOperation('user_op','call',0);
+        }
     });
 
     $('#raise').click(function () {
         //raise
         var add_point = parseInt($('#add_point').val());
-        if(add_point <= 0 || add_point > all_user_point[my_position]){
+        if(add_point <= 0 || add_point > all_user_point[my_position] || add_point < round_min_limit){
             alert("做个好人");
         }else{
-            postOperation('user_op','raise',add_point);
+            if($(this).hasClass("enable")) {
+                postOperation('user_op', 'raise', add_point);
+            }
         }
     });
 
     
     $('#check').click(function () {
         //check
-        postOperation('user_op','check',0);
+        if($(this).hasClass("enable")) {
+            postOperation('user_op', 'check', 0);
+        }
     });
 
     
     $('#fold').click(function () {
         //check
-        postOperation('user_op','fold',0);
+        if($(this).hasClass("enable")) {
+            postOperation('user_op', 'fold', 0);
+        }
     });
     
     $('#allin').click(function () {
         //check
-        postOperation('user_op','allin',0);
+        if($(this).hasClass("enable")) {
+            postOperation('user_op', 'allin', 0);
+        }
     });
 
     $("#greedisgood").click(function(){

@@ -19,11 +19,11 @@
             <div class="quantity-button quantity-down">-</div>
         </div>
 
-        <button id="raise" type="button" class="button button-highlight button-circle button-jumbo">Raise</button>
-        <button id="call" type="button" class="button button-highlight button-circle button-jumbo">Call</button>
-        <button id="check" type="button" class="button button-caution button-circle button-jumbo">Check</button>
-        <button id="fold" type="button" class="button button-action button-circle button-jumbo">Fold</button>
-        <button id="allin" type="button" class="button button-primary button-circle button-jumbo">ALLIN</button>
+        <button id="raise" type="button" class="button button-highlight button-circle button-jumbo enable">Raise</button>
+        <button id="call" type="button" class="button button-highlight button-circle button-jumbo enable">Call</button>
+        <button id="check" type="button" class="button button-caution button-circle button-jumbo enable">Check</button>
+        <button id="fold" type="button" class="button button-action button-circle button-jumbo enable">Fold</button>
+        <button id="allin" type="button" class="button button-primary button-circle button-jumbo enable">ALLIN</button>
     </div>
     <div class="row" style="margin-top:10px;">
         <button id="start_game" type="button" class="button button-royal button-pill button-large">{{i18n .Lang "start_button"}}</button>
@@ -39,6 +39,18 @@
     </div>
 </div>
 <div class="container">
+    <h3>Your Card:</h3>
+    <div class="container" id="user_card_detail">
+    </div>
+</div>
+<div class="container" style="height: 280px;">
+    <div class="col-md-12 column">
+    <div id="RoundInfo" class="col-md-3 column"></div>
+    <div id="UserOp" class="col-md-6 column" style="height: 280px;overflow: scroll"></div>
+    <div id="UserPoint" class="col-md-3 column" style="height: 280px;overflow: scroll"></div>
+    </div>
+</div>
+<div class="container" style="display: none">
     <h3>{{i18n .Lang "card_table"}}:</h3>
     <div class="container cards" id="card_table">
         <div class="position cards__item" id="pos1">
@@ -112,12 +124,8 @@
 <a href="/greedisgood?uname={{.UserName}}" target="_blank">绝地翻盘！！</a>
 </div>
 
-<div id="RoundInfo" class="fix_div" style="left:0px">
 
-</div>
-<div id="UserOp" class="fix_div"  style="right:0px">
 
-</div>
 <div id="EndPanel" class="fix_div">
 <h1>结算面板</h1>
 <div id="winPos"></div>
