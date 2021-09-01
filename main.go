@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	APP_VER = "1.0.0"
+	AppVer = "1.0.0"
 )
 
 func main() {
@@ -27,7 +27,7 @@ func main() {
 	// return
 
 	logs.SetLogger("console")
-	logs.Info(beego.BConfig.AppName + APP_VER)
+	logs.Info(beego.BConfig.AppName + AppVer)
 
 	beego.AddFuncMap("i18n", i18n.Tr)
 
