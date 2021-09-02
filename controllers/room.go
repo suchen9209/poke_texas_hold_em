@@ -10,15 +10,31 @@ type RoomController struct {
 	baseController
 }
 
-func (r *RoomController) Get() {
+var user models.User
+
+func (r *RoomController) Prepare() {
 	s, _ := beego.AppConfig.String("session_name")
-	user := r.GetSession(s)
-	logs.Info(user)
-	if user == nil {
+	sessionData := r.GetSession(s)
+	logs.Info(sessionData)
+	if sessionData == nil {
 		r.Redirect("/", 302)
 		return
+	} else {
+		user = sessionData.(models.User)
 	}
+}
 
-	r.TplName = "room_list.html"
-	r.Data["UserName"] = user.(models.User).Name
+func (r *RoomController) Get() {
+	r.TplName = "room/room_list.html"
+	r.Data["UserName"] = user.Name
+}
+
+func (r *RoomController) Create() {
+	r.TplName = "room/room_add.html"
+	r.Data["UserName"] = user.Name
+}
+
+func (r *RoomController) Post() {
+	roomName := r.GetString("room_name")
+	roomPassword := r.GetString("room_password")
 }

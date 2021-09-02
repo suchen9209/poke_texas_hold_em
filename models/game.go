@@ -2,17 +2,13 @@ package models
 
 import "github.com/beego/beego/v2/core/logs"
 
-/**
-一整场游戏
-**/
+// Game 一整场游戏
 type Game struct {
 	Id       int    `form:"-"`
 	GameName string `form:"name"`
 }
 
-/**
-一局游戏，从发牌到结算
-**/
+//GameMatch 一局游戏，从发牌到结算
 type GameMatch struct {
 	Id                int
 	GameId            int
@@ -26,9 +22,7 @@ type GameMatch struct {
 	GameStatus        string
 }
 
-/**
-单局游戏玩家操作记录
-**/
+// GameMatchLog 单局游戏玩家操作记录
 type GameMatchLog struct {
 	Id          int
 	GameMatchId int
@@ -44,9 +38,7 @@ type UserOperationMsg struct {
 	Name         string
 }
 
-/**
-一整场游戏玩家参与位置，是否在线
-**/
+// GameUser 一整场游戏玩家参与位置，是否在线
 type GameUser struct {
 	Id       int
 	UserId   int

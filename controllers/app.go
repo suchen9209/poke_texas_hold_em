@@ -85,12 +85,12 @@ func (a *AppController) Login() {
 		Name:     uname,
 		Password: fmt.Sprintf("%x", md5.Sum([]byte(pwd+salt))),
 	}
+	logs.Info(u)
 	models.CheckUserLogin(&u)
+	logs.Info(u)
 	if u.Id > 0 {
-		a.SetSession("uid", u.Id)
-		a.SetSession("uname", u.Name)
 		a.SetSession("USER", u)
-		a.Redirect("/ws", 302)
+		a.Redirect("/room", 302)
 	}
 	a.Redirect("/", 302)
 	// a.Data["json"] = models.JsonData{
