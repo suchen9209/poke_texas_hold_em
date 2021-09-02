@@ -31,5 +31,6 @@ func init() {
 	orm.RegisterModel(new(GameMatch))
 	orm.RegisterModel(new(GameMatchLog))
 	orm.RegisterModel(new(GameUser))
+	orm.RegisterModel(new(Room))
 	o = orm.NewOrm()
 }

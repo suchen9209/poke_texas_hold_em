@@ -30,40 +30,25 @@
                 </tr>
                 </thead>
                 <tbody>
+                {{range .RoomList}}
                 <tr>
                     <td>
-                        1
+                        {{.Id}}
                     </td>
                     <td>
-                        天圆地方阁
+                        {{.RoomName}}
                     </td>
                     <td>
                         明天
                     </td>
                     <td>
-                        不是我
+                        {{.CreateUserId}}
                     </td>
                     <td>
-                        打的火热
+                        <a href="/room/entry/{{.Id}}">进！</a>
                     </td>
                 </tr>
-                <tr class="success">
-                    <td>
-                        2
-                    </td>
-                    <td>
-                        天人一线
-                    </td>
-                    <td>
-                        明天正午
-                    </td>
-                    <td>
-                        不是我
-                    </td>
-                    <td>
-                        打的冰凉
-                    </td>
-                </tr>
+                {{end}}
                 </tbody>
             </table>
         </div>

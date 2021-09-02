@@ -148,6 +148,8 @@ var (
 
 // This function handles all incoming chan messages.
 func chatroom_new(room_id int) {
+	logs.Info(nowGameMatch_map)
+	logs.Info(room_id)
 	for {
 		select {
 		case op := <-gameop:

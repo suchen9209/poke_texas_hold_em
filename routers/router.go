@@ -16,6 +16,7 @@ func init() {
 
 	beego.Router("/room", &controllers.RoomController{})
 	beego.Router("/room/add", &controllers.RoomController{}, "get:Create")
+	beego.Router("/room/entry/:id", &controllers.RoomController{}, "get:EntryRoom")
 
 	beego.Router("/greedisgood", &controllers.AppController{}, "get:GreedIsGood")
 
