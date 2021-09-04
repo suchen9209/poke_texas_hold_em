@@ -16,3 +16,9 @@
 <script src="/static/js/websocket.js"></script>
 <script src="/static/js/puker.js"></script>
 {{end}}
+{{if .IsGameRoom}}
+<link href="/static/css/cardtable.css" rel="stylesheet" />
+<link href="/static/css/puker.css" rel="stylesheet" />
+<script src="/static/js/game_room.js"></script>
+<script src="/static/js/puker.js"></script>
+{{end}}

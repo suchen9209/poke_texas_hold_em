@@ -21,3 +21,7 @@ func GetOnlineRoom() []Room {
 	_, _ = s.All(&RoomList)
 	return RoomList
 }
+
+func CloseRoom(roomId int) {
+	o.QueryTable("room").Filter("id", roomId).Delete()
+}

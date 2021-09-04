@@ -1,0 +1,137 @@
+{{template "base/base.html" .}}
+{{define "head"}}
+<title>{{i18n .Lang "websocket_chatroom"}} - {{i18n .Lang "app_intro"}}</title>
+{{end}}
+{{define "body"}}
+
+<div class="container">
+    <h3>{{i18n .Lang "username"}}: <span id="uname">{{.UserName}}</span></h3>
+    <input type="hidden" id="user_id" value="{{.User.Id}}"/>
+    <input type="hidden" id="room_id" value="{{.RoomID}}"/>
+    <input type="hidden" id="position" value=""/>
+    <div id="your_turn" class="row your_turn" style="margin-top:10px;display:none">
+        <h1>YOUR TURN</h1>
+    </div>
+
+    <div class="quantity row" style="display:none;">
+        <input id="add_point" type="number" min="0" max="999999" step="5" value="0">
+        <div class="quantity-nav">
+            <div class="quantity-button quantity-up">+</div>
+            <div class="quantity-button quantity-down">-</div>
+        </div>
+
+        <button id="raise" type="button" class="button button-highlight button-circle button-jumbo enable">Raise</button>
+        <button id="call" type="button" class="button button-highlight button-circle button-jumbo enable">Call</button>
+        <button id="check" type="button" class="button button-caution button-circle button-jumbo enable">Check</button>
+        <button id="fold" type="button" class="button button-action button-circle button-jumbo enable">Fold</button>
+        <button id="allin" type="button" class="button button-primary button-circle button-jumbo enable">ALLIN</button>
+    </div>
+    <div class="row" style="margin-top:10px;">
+        <button id="start_game" type="button" class="button button-royal button-pill button-large">{{i18n .Lang "start_button"}}</button>
+        {{/* <button id="show_card3" type="button" class="button button-highlight button-pill button-large">show3</button>
+        <button id="show_card4" type="button" class="button button-highlight button-pill button-large">show4</button>
+        <button id="show_card5" type="button" class="button button-highlight button-pill button-large">show5</button> */}}
+    </div>
+
+</div>
+<div class="container">
+    <h3>Public Card:</h3>
+    <div class="container" id="public_card_table">
+    </div>
+</div>
+<div class="container">
+    <h3>Your Card:</h3>
+    <div class="container" id="user_card_detail">
+    </div>
+</div>
+<div class="container" style="height: 280px;">
+    <div class="col-md-12 column">
+    <div id="RoundInfo" class="col-md-3 column"></div>
+    <div id="UserOp" class="col-md-6 column" style="height: 280px;overflow: scroll"></div>
+    <div id="UserPoint" class="col-md-3 column" style="height: 280px;overflow: scroll"></div>
+    </div>
+</div>
+<div class="container" style="display: none">
+    <h3>{{i18n .Lang "card_table"}}:</h3>
+    <div class="container cards" id="card_table">
+        <div class="position cards__item" id="pos1">
+            <div class="user_info">
+                <span class="user_name"></span>
+                <span class="user_point"></span>
+                <div class="pos_number"><div class="container__status"></div>1</div>
+            </div>            
+            <div class="user_card"></div>
+        </div>
+        <div class="position cards__item" id="pos2">
+            <div class="user_info">
+                <span class="user_name"></span>
+                <span class="user_point"></span>
+                <div class="pos_number"><div class="container__status"></div>2</div>
+            </div>            
+            <div class="user_card"></div>
+        </div>
+        <div class="position cards__item" id="pos3">
+            <div class="user_info">
+                <span class="user_name"></span>
+                <span class="user_point"></span>
+                <div class="pos_number"><div class="container__status"></div>3</div>
+            </div>            
+            <div class="user_card"></div>
+        </div>
+        <div class="position cards__item" id="pos4">
+            <div class="user_info">
+                <span class="user_name"></span>
+                <span class="user_point"></span>
+                <div class="pos_number"><div class="container__status"></div>4</div>
+            </div>            
+            <div class="user_card"></div>
+        </div>
+        <div class="position cards__item" id="pos5">
+            <div class="user_info">
+                <span class="user_name"></span>
+                <span class="user_point"></span>
+                <div class="pos_number"><div class="container__status"></div>5</div>
+            </div>            
+            <div class="user_card"></div>
+        </div>
+        <div class="position cards__item" id="pos6">
+            <div class="user_info">
+                <span class="user_name"></span>
+                <span class="user_point"></span>
+                <div class="pos_number"><div class="container__status"></div>6</div>
+            </div>            
+            <div class="user_card"></div>
+        </div>
+        <div class="position cards__item" id="pos7">
+            <div class="user_info">
+               <span class="user_name"></span>
+                <span class="user_point"></span>
+                <div class="pos_number"><div class="container__status"></div>7</div>
+            </div>            
+            <div class="user_card"></div>
+        </div>
+        <div class="position cards__item" id="pos8">
+            <div class="user_info">
+                <span class="user_name"></span>
+                <span class="user_point"></span>
+                <div class="pos_number"><div class="container__status"></div>8</div>
+            </div>            
+            <div class="user_card"></div>
+        </div>
+    </div>
+</div>
+
+<div class="container" id="greedisgood" style="display:none;">
+<a href="/greedisgood?uname={{.UserName}}" target="_blank">绝地翻盘！！</a>
+</div>
+
+
+
+<div id="EndPanel" class="fix_div">
+<h1>结算面板</h1>
+<div id="winPos"></div>
+<div id="bigCards" ></div>
+<div id="publicCard"></div>
+<div id="userCards"></div>
+</div>
+{{end}}

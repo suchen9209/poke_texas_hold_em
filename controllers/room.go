@@ -1,9 +1,12 @@
 package controllers
 
 import (
+	"encoding/json"
 	"github.com/beego/beego/v2/core/logs"
 	beego "github.com/beego/beego/v2/server/web"
 	"github.com/beego/i18n"
+	"github.com/gorilla/websocket"
+	"net/http"
 	"poke/models"
 	"strconv"
 )
@@ -62,12 +65,82 @@ func (r *RoomController) EntryRoom() {
 	roomID := r.Ctx.Input.Param(":id")
 
 	logs.Info(roomID)
-	r.TplName = "websocket.html"
-	r.Data["IsWebSocket"] = true
-	r.Data["UserName"] = user.Name
-	r.Data["Point"] = user.Point
+	r.TplName = "room/game_room.html"
+	r.Data["IsGameRoom"] = true
+	r.Data["User"] = user
 	r.Data["RoomID"] = roomID
 }
+
+func (r *RoomController) RoomSocket() {
+	user := r.GetSession("USER")
+	roomID, err := strconv.Atoi(r.Ctx.Input.Param(":id"))
+	logs.Info(user)
+	if user == nil || err != nil{
+		r.Redirect("/", 302)
+		return
+	}
+
+	u := user.(models.User)
+
+	//ws, err := websocket.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil, 1024, 1024)
+	upgrade := websocket.Upgrader{
+		HandshakeTimeout: 10,
+		ReadBufferSize: 1024,
+		WriteBufferSize: 1024,
+	}
+	ws, err := upgrade.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil)
+	if err != nil {
+		return
+	}
+
+	if _, ok := err.(websocket.HandshakeError); ok {
+		http.Error(r.Ctx.ResponseWriter, "Not a websocket handshake", 400)
+		return
+	} else if err != nil {
+		logs.Error("Cannot setup WebSocket connection:", err)
+		return
+	}
+
+	UserConnMap[u.Id] = ws
+
+	models.SetUserIntoRoom(u,roomID)
+
+	defer Leave(u)
+
+	for {
+		_, p, err := ws.ReadMessage()
+		if err != nil {
+			return
+		}
+		// publish <- newEvent(models.EVENT_MESSAGE, uname, string(p))
+		data := new(models.ClientMessage)
+		err2 := json.Unmarshal(p, data)
+		if err2 != nil {
+			return
+		}
+		logs.Info(data)
+		switch data.Type {
+		case "game_op":
+			gameOpMap[roomID] <- data.Message
+		case "user_op":
+			top := models.UserOperationMsg{
+				Type:     models.EVENT_USER_OPERATION_INFO,
+				Position: data.Position,
+				Name:     data.Name,
+				GameMatchLog: models.GameMatchLog{
+					UserId:      data.UserId,
+					Operation:   data.Operation,
+					PointNumber: data.Point,
+				},
+			}
+			// logs.Info("user op")
+			// logs.Info(top)
+			userOperationProcessMap[roomID] <- top
+		}
+
+	}
+}
+
 
 func (r *RoomController) Post() {
 	roomName := r.GetString("room_name")
@@ -79,7 +152,7 @@ func (r *RoomController) Post() {
 	}
 	roomId := models.CreateRoom(&room)
 	if roomId > 0 {
-		go chatroom_new(int(roomId))
+		go gameRoom(int(roomId))
 		r.Redirect("/room/entry/"+strconv.FormatInt(roomId, 10), 302)
 	} else {
 		r.Redirect("/room", 302)

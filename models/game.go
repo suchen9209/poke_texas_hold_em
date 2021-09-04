@@ -42,7 +42,7 @@ type UserOperationMsg struct {
 type GameUser struct {
 	Id       int
 	UserId   int
-	GameId   int
+	GameId   int	//即RoomID
 	Position int
 	Online   int
 }
@@ -121,6 +121,48 @@ func SetUserReturnPlayer(u User) GameUser {
 	return tmp_g
 }
 
+func SetUserIntoRoom(u User,RoomID int) GameUser {
+	//如果已经存在，则直接返回位置
+	var gut = &GameUser{
+		UserId: u.Id,
+		GameId: RoomID,
+	}
+	o.Read(gut, "UserId", "GameId")
+	if gut.Id > 0 {
+		gut.Online = 1
+		o.Update(gut)
+		return *gut
+	}
+
+	//如果不存在查找剩余位置，分配座位
+	var gu []*GameUser
+	number, _ := o.QueryTable("game_user").Filter("game_id", RoomID).Filter("online", 1).All(&gu)
+	if number >= GAMEUSERNUMBER {
+		panic("too many player")
+	}
+	var positionList = make(map[int]int)
+	for _, g := range gu {
+		positionList[g.Position] = g.UserId
+
+	}
+	var tmpG GameUser
+	var pos int
+	for i := 1; i <= GAMEUSERNUMBER; i++ {
+		if positionList[i] == 0 {
+			pos = i
+			tmpG.UserId = u.Id
+			tmpG.GameId = RoomID
+			tmpG.Position = pos
+			tmpG.Online = 1
+			o.Insert(&tmpG)
+			break
+		}
+	}
+
+	return tmpG
+}
+
+
 func RemoveGameUser(uid int, gid int) {
 	o.QueryTable("game_user").Filter("game_id", gid).Filter("user_id", uid).Delete()
 }
@@ -136,29 +178,28 @@ func GetUserPointWithSeat(gid int) []UserPointSeat {
 }
 
 func InitGameMatch(gid int) GameMatch {
-	var tmp, new_game GameMatch
-	var game_user_list []GameUser
-	o.QueryTable("game_user").Filter("game_id", gid).Filter("online", 1).All(&game_user_list)
-	if game_user_list == nil {
+	var tmp, newGame GameMatch
+	var gameUserList []GameUser
+	o.QueryTable("game_user").Filter("game_id", gid).Filter("online", 1).All(&gameUserList)
+	if gameUserList == nil {
 		panic("no user")
 	}
 	tmpMap := make(map[int]int)
-	for _, v := range game_user_list {
+	for _, v := range gameUserList {
 		tmpMap[v.Position] = v.UserId
 	}
-	new_game.GameId = gid
+	newGame.GameId = gid
 	o.QueryTable("game_match").Filter("game_id", gid).OrderBy("-id").One(&tmp)
 	if tmp.Id <= 0 {
 		//之前无对局
-		new_game.SmallBindPosition = getPosition(0, tmpMap)
-
+		newGame.SmallBindPosition = getPosition(0, tmpMap)
 	} else {
-		new_game.SmallBindPosition = getPosition(tmp.SmallBindPosition, tmpMap)
+		newGame.SmallBindPosition = getPosition(tmp.SmallBindPosition, tmpMap)
 	}
-	new_game.BigBindPosition = getPosition(new_game.SmallBindPosition, tmpMap)
-	new_game.GameStatus = "INIT"
-	o.Insert(&new_game)
-	return new_game
+	newGame.BigBindPosition = getPosition(newGame.SmallBindPosition, tmpMap)
+	newGame.GameStatus = "INIT"
+	o.Insert(&newGame)
+	return newGame
 
 }
 

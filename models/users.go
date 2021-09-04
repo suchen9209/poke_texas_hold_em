@@ -38,5 +38,4 @@ func CheckUserInGame(name string) (*GameUser, bool) {
 		}
 	}
 	return &gameUser, can_login
-
 }
