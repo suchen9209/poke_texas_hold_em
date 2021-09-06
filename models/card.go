@@ -57,6 +57,30 @@ func InitCardMap() {
 	}
 }
 
+func GetNewCardMap() map[int]Card {
+	tmpCardMap := make(map[int]Card, 40)
+	suitsArr := [4]string{HEART, DIAMOND, SPADE, CLUB}
+	index := 1
+	for i := POKER_NUMBER_6; i <= POKER_NUMBER_A; i++ {
+		for _, v := range suitsArr {
+			poker := Card{Value: i, Color: v}
+			tmpCardMap[index] = poker
+			index++
+		}
+	}
+	return tmpCardMap
+}
+
+func GetOneCardFromCardMap(c map[int]Card) *Card{
+	var card = new(Card)
+	for key, v := range c {
+		card = &v
+		delete(c, key)
+		break
+	}
+	return card
+}
+
 func GetOneCard() *Card {
 	if len(cardMap) == 0 {
 		panic("no cards error")

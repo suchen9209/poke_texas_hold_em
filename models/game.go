@@ -143,7 +143,6 @@ func SetUserIntoRoom(u User,RoomID int) GameUser {
 	var positionList = make(map[int]int)
 	for _, g := range gu {
 		positionList[g.Position] = g.UserId
-
 	}
 	var tmpG GameUser
 	var pos int
@@ -160,6 +159,16 @@ func SetUserIntoRoom(u User,RoomID int) GameUser {
 	}
 
 	return tmpG
+}
+
+func GetRoomUserPositionList(roomId int) map[int]int{
+	var gu []*GameUser
+	_, _ = o.QueryTable("game_user").Filter("game_id", roomId).Filter("online", 1).All(&gu)
+	var positionList = make(map[int]int)
+	for _, g := range gu {
+		positionList[g.Position] = g.UserId
+	}
+	return positionList
 }
 
 
@@ -232,7 +241,7 @@ type InRoundUserDetail struct {
 func GetRoundUserDetail(gid int) []InRoundUserDetail {
 	var rmap []InRoundUserDetail
 	o.Raw("SELECT gu.`user_id`,gu.`position`,u.point,u.name FROM game_user gu	LEFT JOIN `user` u  ON u.`id` = gu.`user_id` Where gu.game_id=?").SetArgs(gid).QueryRows(&rmap)
-	logs.Info(rmap)
+	//logs.Info(rmap)
 	return rmap
 }
 

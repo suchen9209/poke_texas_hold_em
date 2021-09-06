@@ -26,21 +26,21 @@ import (
 )
 
 var (
-	UserConnMap = make(map[int] *websocket.Conn)
+	UserConnMap = make(map[int] *websocket.Conn)	//记录用户ws连接
 
 	publish_map         map[int]chan models.SeatInfo
-	gameProcessMap     map[int]chan models.CardInfo
-	userInfoChannelMap map[int]chan models.Event
+	gameProcessMap     map[int]chan models.CardInfo	//游戏消息对应的channel
+	userInfoChannelMap map[int]chan models.Event	//用户信息
 	roundprocess_map   map[int]chan models.RoundInfo
-	userOperationProcessMap map[int]chan models.UserOperationMsg
-	gameOpMap               map[int]chan string
+	userOperationProcessMap map[int]chan models.UserOperationMsg	//用户操作
+	gameOpMap               map[int]chan string		//游戏操作 控制游戏进程
 	seat_map                map[int]*list.List
 	positionTurn_map         map[int]int //记录当前轮到的玩家位置
 	LimitPoint_map           map[int]int //当前轮最小点数值
 
-	nowGameMatchMap map[int]models.GameMatch
+	nowGameMatchMap map[int]models.GameMatch	//当前游戏的详情
 
-	roundUserDetail_map map[int]map[int]models.InRoundUserDetail
+	roundUserDetailMap map[int]map[int]models.InRoundUserDetail
 
 	emptySendMap  map[int]int //游戏结束时清零 仅用于记录大小盲
 	detailArr_map map[int][]models.InRoundUserDetail
@@ -49,11 +49,16 @@ var (
 
 	viewerList_map map[int]*list.List
 
-	gameMatchAllin_map map[int]map[int]int //allin的位置和point
+	gameMatchAllinMap map[int]map[int]int //allin的位置和point
 
 	foldPoint_map map[int]map[string]int
 
 	BigBindPositionTurn_map map[int]int
+
+	GameAllCardMap map[int]map[int]models.Card
+	PublicCardMap map[int]map[int]models.Card
+
+	UsersCardMap map[int]map[int][]models.Card
 )
 
 // This function handles all incoming chan messages.
@@ -327,58 +332,46 @@ func startRoomGame(RoomId int) {
 	//清除上局剩余的用户信息，例如卡牌信息等
 	userInfoChannelMap[RoomId] <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
 	nowGameMatchMap[RoomId] = models.InitGameMatch(RoomId)
-	models.InitCardMap()
-	gameMatchAllin = make(map[int]int)
-	nowGameMatch.GameStatus = models.GAME_STATUS_LICENSING
-	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
+	initCardMap(RoomId)
+	gameMatchAllinMap[RoomId] = make(map[int]int)
+	changeGameMatch(RoomId,models.GAME_STATUS_LICENSING)
 
-	tmp_card := models.CardInfo{
+	tmpCard := models.CardInfo{
 		Type: models.EVENT_CLEAR_CARD,
 	}
-	sendMsgToSeat(tmp_card)
-
-	for ss := seat.Front(); ss != nil; ss = ss.Next() {
-		var tmp_poker = models.GetOneCard()
-		models.UsersCard[ss.Value.(Player).Position] = append(models.UsersCard[ss.Value.(Player).Position], *tmp_poker)
-		gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
-	}
-	for ss := seat.Front(); ss != nil; ss = ss.Next() {
-		var tmp_poker = models.GetOneCard()
-		models.UsersCard[ss.Value.(Player).Position] = append(models.UsersCard[ss.Value.(Player).Position], *tmp_poker)
-		gameprocess <- sendCard(models.EVENT_LICENSING, ss.Value.(Player).user.Name, ss.Value.(Player).Position, *tmp_poker)
-	}
+	sendToRoomUser(RoomId, tmpCard)
+	sendCardToUser(RoomId)
 
 	for i := 1; i <= 5; i++ {
-		var tmp_poker = models.GetOneCard()
-		models.PublicCard[i] = *tmp_poker
+		var tmpPoker = models.GetOneCardFromCardMap(GameAllCardMap[RoomId])
+		PublicCardMap[RoomId][i] = *tmpPoker
 	}
-	nowGameMatch.GameStatus = models.GAME_STATUS_ROUND1
-	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
+	changeGameMatch(RoomId,models.GAME_STATUS_ROUND1)
 
 	//初始化座位
-	detailArr = models.GetRoundUserDetail(1)
-	roundUserDetail = make(map[int]models.InRoundUserDetail)
+	detailArr = models.GetRoundUserDetail(RoomId)
+	roundUserDetailMap[RoomId] = make(map[int]models.InRoundUserDetail)
 	logs.Info("init seat")
 	logs.Info(detailArr)
 	for _, v := range detailArr {
-		roundUserDetail[v.Position] = v
+		roundUserDetailMap[RoomId][v.Position] = v
 	}
-	logs.Info(roundUserDetail)
+	logs.Info(roundUserDetailMap[RoomId])
 
 	//小盲
-	positionTurn = nowGameMatch.SmallBindPosition
-	uomsg := models.UserOperationMsg{
+	positionTurn = nowGameMatchMap[RoomId].SmallBindPosition
+	userOpMsg := models.UserOperationMsg{
 		Type:     models.EVENT_USER_OPERATION_INFO,
-		Position: nowGameMatch.SmallBindPosition,
-		Name:     roundUserDetail[nowGameMatch.SmallBindPosition].Name,
+		Position: nowGameMatchMap[RoomId].SmallBindPosition,
+		Name:     roundUserDetailMap[RoomId][nowGameMatch.SmallBindPosition].Name,
 		GameMatchLog: models.GameMatchLog{
-			GameMatchId: nowGameMatch.Id,
-			UserId:      roundUserDetail[nowGameMatch.SmallBindPosition].UserId,
+			GameMatchId: nowGameMatchMap[RoomId].Id,
+			UserId:      roundUserDetailMap[RoomId][nowGameMatch.SmallBindPosition].UserId,
 			Operation:   models.GAME_OP_RAISE,
 			PointNumber: 5,
 		},
 	}
-	userOperationProcess <- uomsg
+	userOperationProcessMap[RoomId] <- userOpMsg
 
 	//大盲
 	positionTurn = nowGameMatch.BigBindPosition
@@ -405,4 +398,46 @@ func startRoomGame(RoomId int) {
 		positionTurn = nowGameMatch.SmallBindPosition
 	}
 	nextRoundInfo()
+}
+
+func initCardMap(roomId int){
+	GameAllCardMap[roomId] = models.GetNewCardMap()
+	PublicCardMap[roomId] = make(map[int]models.Card)
+	UsersCardMap[roomId] = make(map[int][]models.Card)
+}
+
+func changeGameMatch(roomId int,status string){
+	tmp := nowGameMatchMap[roomId]
+	tmp.GameStatus = status
+	models.UpdateGameMatchStatus(tmp, "game_status")
+	nowGameMatchMap[roomId] = tmp
+}
+
+func sendToRoomUser(roomId int,data interface{}){
+	positionMap := models.GetRoomUserPositionList(roomId)
+	for _, uid := range positionMap {
+		sendInWs(UserConnMap[uid],data)
+	}
+}
+
+func sendInWs(ws *websocket.Conn,data interface{}){
+	if ws != nil {
+		msg, _ := json.Marshal(data)
+		if ws.WriteMessage(websocket.TextMessage, msg) != nil {
+			// User disconnected.
+			//unsubscribe <- ss.Value.(Player).user
+		}
+	}
+}
+func sendCardToUser(roomId int){
+	positionMap := models.GetRoomUserPositionList(roomId)
+	for pos, uid := range positionMap {
+		var tmpPoker = models.GetOneCardFromCardMap(GameAllCardMap[roomId])
+		UsersCardMap[roomId][pos] = append(UsersCardMap[roomId][pos], *tmpPoker)
+		sendInWs(UserConnMap[uid],sendCard(models.EVENT_LICENSING, "", pos, *tmpPoker))
+
+		var tmpPoker2 = models.GetOneCardFromCardMap(GameAllCardMap[roomId])
+		UsersCardMap[roomId][pos] = append(UsersCardMap[roomId][pos], *tmpPoker2)
+		sendInWs(UserConnMap[uid],sendCard(models.EVENT_LICENSING, "", pos, *tmpPoker2))
+	}
 }
