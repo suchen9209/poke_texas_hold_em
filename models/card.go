@@ -164,36 +164,37 @@ func StringToCard(s string) []Card {
 	return cc
 }
 
-func TransMaxHandToCardInfo() {
+func TransMaxHandToCardInfo(cardStr string) []Card{
+	mh := analyzeHandStr(cardStr).getMaxHands()
 	ShowMaxCard = ShowMaxCard[0:0]
-	handint := GameMaxHand.MaxHand
-	switch GameMaxHand.MaxCase {
+	handInt := mh.MaxHand
+	switch mh.MaxCase {
 	case StraightFlush, Flush:
 		initValue := 2
-		for handint > 0 {
-			if handint&1 == 1 {
+		for handInt > 0 {
+			if handInt&1 == 1 {
 				ShowMaxCard = append(ShowMaxCard, Card{
 					Value: initValue,
-					Color: SuitsNum[GameMaxHand.FlushSuit],
+					Color: SuitsNum[mh.FlushSuit],
 				})
 			}
 			initValue++
-			handint = handint >> 1
+			handInt = handInt >> 1
 		}
 	case FourOfAKind:
 		//0000000000100 0000000000100 0000000000100 1000000000000
-		firstuint := getFirstOne(handint) >> (13 * 3)
-		findCardColor(GameMaxHand.Handlog.Suits, firstuint, false)
-		tmpMaxHand := handint
+		firstuint := getFirstOne(handInt) >> (13 * 3)
+		findCardColor(mh.Handlog.Suits, firstuint, false)
+		tmpMaxHand := handInt
 		tmpMaxHand = tmpMaxHand ^ firstuint     //0000000000100 0000000000100 0000000000100 1000000000000
 		tmpMaxHand = AKQJT98765432 & tmpMaxHand //0000000000000 0000000000000 0000000000000 1000000000000
 
-		findCardColor(GameMaxHand.Handlog.Suits, tmpMaxHand, true)
+		findCardColor(mh.Handlog.Suits, tmpMaxHand, true)
 	case FullHouse:
 		// 0000000010000 0000010010000 0000010010000
 		// 0000000000001 0000000000101 0000000000101
-		left13 := handint >> 26
-		right13 := handint & AKQJT98765432
+		left13 := handInt >> 26
+		right13 := handInt & AKQJT98765432
 		var threeValue, secondValue uint64
 		if CountOne(left13) == 2 {
 			threeValue = getFirstOne(left13)
@@ -202,56 +203,56 @@ func TransMaxHandToCardInfo() {
 			threeValue = getFirstOne(left13)
 			secondValue = getFirstOne(right13 ^ threeValue)
 		}
-		findCardColor(GameMaxHand.Handlog.Suits, threeValue, false)
-		findCardColor(GameMaxHand.Handlog.Suits, secondValue, false)
+		findCardColor(mh.Handlog.Suits, threeValue, false)
+		findCardColor(mh.Handlog.Suits, secondValue, false)
 	case Straight:
 		// 1000000001111
 		var initA uint64
 		initA = 4096 //1 0000 0000 0000
 		for initA > 0 {
-			if initA&handint > 0 {
-				findCardColor(GameMaxHand.Handlog.Suits, initA, true)
+			if initA&handInt > 0 {
+				findCardColor(mh.Handlog.Suits, initA, true)
 			}
 			initA = initA >> 1
 		}
 	case ThreeOfAKind:
 		// 0000000000001 0000000000001 0001000001001
 
-		left13 := handint >> 26
-		right13 := handint & AKQJT98765432
+		left13 := handInt >> 26
+		right13 := handInt & AKQJT98765432
 		right13 = right13 ^ left13
-		findCardColor(GameMaxHand.Handlog.Suits, left13, false)
+		findCardColor(mh.Handlog.Suits, left13, false)
 		var initA uint64
 		initA = 4096 //1 0000 0000 0000
 		for initA > 0 {
 			if initA&right13 > 0 {
-				findCardColor(GameMaxHand.Handlog.Suits, initA, true)
+				findCardColor(mh.Handlog.Suits, initA, true)
 			}
 			initA = initA >> 1
 		}
 	case TwoPair:
 		//1000000000001 1000000001001
-		left13 := handint >> 13
-		right13 := handint & AKQJT98765432
+		left13 := handInt >> 13
+		right13 := handInt & AKQJT98765432
 		var initA uint64
 		initA = 4096 //1 0000 0000 0000
 		for initA > 0 {
 			if initA&left13 > 0 {
-				findCardColor(GameMaxHand.Handlog.Suits, initA, false)
+				findCardColor(mh.Handlog.Suits, initA, false)
 			}
 			initA = initA >> 1
 		}
 		lastCard := left13 ^ right13
-		findCardColor(GameMaxHand.Handlog.Suits, lastCard, true)
+		findCardColor(mh.Handlog.Suits, lastCard, true)
 	case OnePair:
 		//1000000000000 1000100001001
-		left13 := handint >> 13
-		right13 := handint & AKQJT98765432
+		left13 := handInt >> 13
+		right13 := handInt & AKQJT98765432
 		var initA uint64
 		initA = 4096 //1 0000 0000 0000
 		for initA > 0 {
 			if initA&left13 > 0 {
-				findCardColor(GameMaxHand.Handlog.Suits, initA, false)
+				findCardColor(mh.Handlog.Suits, initA, false)
 			}
 			initA = initA >> 1
 		}
@@ -259,7 +260,7 @@ func TransMaxHandToCardInfo() {
 		initA = 4096                  //1 0000 0000 0000
 		for initA > 0 {
 			if initA&last3Card > 0 {
-				findCardColor(GameMaxHand.Handlog.Suits, initA, true)
+				findCardColor(mh.Handlog.Suits, initA, true)
 			}
 			initA = initA >> 1
 		}
@@ -268,17 +269,18 @@ func TransMaxHandToCardInfo() {
 		var initA uint64
 		initA = 4096 //1 0000 0000 0000
 		for initA > 0 {
-			if initA&handint > 0 {
-				findCardColor(GameMaxHand.Handlog.Suits, initA, true)
+			if initA&handInt > 0 {
+				findCardColor(mh.Handlog.Suits, initA, true)
 			}
 			initA = initA >> 1
 		}
 	}
 	logs.Info(ShowMaxCard)
+	return ShowMaxCard
 }
 
 func findCardColor(cardLog [4]uint64, cardUint uint64, onlyOne bool) {
-	for k, v := range GameMaxHand.Handlog.Suits {
+	for k, v := range cardLog {
 		if len(ShowMaxCard) == 5 {
 			break
 		}

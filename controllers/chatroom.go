@@ -786,7 +786,7 @@ func CalWinUser() []int {
 		winCard = append(winCard, models.UsersCard[v])
 	}
 
-	models.TransMaxHandToCardInfo()
+	models.TransMaxHandToCardInfo(bigString)
 	var tmp []models.Card
 	for _, v := range models.PublicCard {
 		tmp = append(tmp, v)

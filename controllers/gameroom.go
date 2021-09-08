@@ -15,7 +15,6 @@
 package controllers
 
 import (
-	"container/list"
 	"encoding/json"
 
 	"poke/models"
@@ -28,13 +27,10 @@ import (
 var (
 	UserConnMap = make(map[int] *websocket.Conn)	//记录用户ws连接
 
-	publish_map             map[int]chan models.SeatInfo
-	gameProcessMap          map[int]chan models.CardInfo	//游戏消息对应的channel
 	userInfoChannelMap      map[int]chan models.Event	//用户信息
 	roundProcessMap         map[int]chan models.RoundInfo
 	userOperationProcessMap map[int]chan models.UserOperationMsg	//用户操作
 	gameOpMap               map[int]chan string		//游戏操作 控制游戏进程
-	seat_map                map[int]*list.List
 	PositionTurnMap         map[int]int //记录当前轮到的玩家位置
 	LimitPointMap           map[int]int //当前轮最小点数值
 
@@ -43,15 +39,14 @@ var (
 	roundUserDetailMap map[int]map[int]models.InRoundUserDetail
 
 	emptySendMap  map[int]int //游戏结束时清零 仅用于记录大小盲
-	detailArr_map map[int][]models.InRoundUserDetail
+	DetailArrMap map[int][]models.InRoundUserDetail
 
 	RoundCheckNumberMap map[int]int
 
-	viewerList_map map[int]*list.List
 
 	gameMatchAllinMap map[int]map[int]int //allin的位置和point
 
-	foldPoint_map map[int]map[string]int
+	FoldPointMap map[int]map[string]int
 
 	BigBindPositionTurnMap map[int]int
 
@@ -67,48 +62,13 @@ func gameRoom(roomId int) {
 		select {
 		case op := <-gameOpMap[roomId]:
 			if op == "start" {
-				if (nowGameMatchMap[roomId].Id == 0 || nowGameMatchMap[roomId].GameStatus == models.GAME_STATUS_END) && seat_map[roomId].Len() >= 2 {
+				if nowGameMatchMap[roomId].Id == 0 || nowGameMatchMap[roomId].GameStatus == models.GAME_STATUS_END {
 					startRoomGame(roomId)
 				}
 			}
 			if op == "close"{
 				models.CloseRoom(roomId)
 				return
-			}
-		case process := <-gameProcessMap[roomId]:
-			switch process.Type {
-			case models.EVENT_PUBLIC_CARD:
-				sendToRoomUser(roomId,process)
-			}
-		case userInfo := <-userInfoChannel:
-			logs.Info(userInfo)
-			if userInfo.Type == models.EVENT_REFRESH_USER_INFO {
-				var data UserInfoMsg
-				data.Type = userInfo.Type
-				data.Info = models.GetUserPointWithSeat(1)
-				sendMsgToSeat(data)
-			}
-		case roundInfo := <-roundprocess:
-			switch roundInfo.Type {
-			case models.EVENT_ROUND_INFO:
-				tmp := roundUserDetail[roundInfo.NowPosition]
-				tmp.AllowOp = tmp.AllowOp[0:0]
-				if LimitPoint == 0 {
-					tmp.AllowOp = append(tmp.AllowOp, "check")
-				}
-				if tmp.RoundPoint+tmp.Point >= LimitPoint && LimitPoint > 0 {
-					tmp.AllowOp = append(tmp.AllowOp, "call")
-				}
-				if tmp.RoundPoint+tmp.Point > LimitPoint {
-					tmp.AllowOp = append(tmp.AllowOp, "raise")
-				}
-				tmp.AllowOp = append(tmp.AllowOp, "allin")
-				tmp.AllowOp = append(tmp.AllowOp, "fold")
-
-				roundUserDetail[roundInfo.NowPosition] = tmp
-				roundInfo.Detail = roundUserDetail[roundInfo.NowPosition]
-				roundInfo.AllPointInRound = getRoundPoint(nowGameMatch.GameStatus, false)
-				sendMsgToSeat(roundInfo)
 			}
 		case uop := <-userOperationProcessMap[roomId]:
 			emptySendMap[roomId]++
@@ -132,7 +92,7 @@ func gameRoom(roomId int) {
 				roomOpChangePoint(uop.GameMatchLog.PointNumber, uop.Position,roomId)
 				gameMatchAllinMap[roomId][uop.Position] = roundUserDetailMap[roomId][uop.Position].RoundPoint
 			case models.GAME_OP_FOLD:
-				foldPoint[nowGameMatchMap[roomId].GameStatus] += roundUserDetailMap[roomId][uop.Position].RoundPoint
+				FoldPointMap[roomId][nowGameMatchMap[roomId].GameStatus] += roundUserDetailMap[roomId][uop.Position].RoundPoint
 				logs.Info(foldPoint)
 				delete(roundUserDetailMap[roomId], uop.Position)
 				delete(UsersCardMap[roomId], uop.Position)
@@ -147,154 +107,44 @@ func gameRoom(roomId int) {
 				RoomGameEnd(roomId)
 			} else {
 				if fromCheck {
-					if roundCheckNumber < len(roundUserDetail) {
-						positionTurn = getNextPosition(roundUserDetail, positionTurn)
+					if RoundCheckNumberMap[roomId] < len(roundUserDetailMap[roomId]) {
+						PositionTurnMap[roomId] = getNextPosition(roundUserDetailMap[roomId], PositionTurnMap[roomId])
 					} else {
-						endRoundPoint()
+						endRoomRoundPoint(roomId)
 					}
-					nextRoundInfo()
+					nextRoomRoundInfo(roomId)
 				} else {
-					var have_not_fill_point bool
-					have_not_fill_point = false
-					for _, v := range roundUserDetail {
-						_, ok := gameMatchAllin[v.Position]
-						if v.RoundPoint < LimitPoint && !ok {
-							have_not_fill_point = true
+					var haveNotFillPoint bool
+					haveNotFillPoint = false
+					for _, v := range roundUserDetailMap[roomId] {
+						_, ok := gameMatchAllinMap[roomId][v.Position]
+						if v.RoundPoint < LimitPointMap[roomId] && !ok {
+							haveNotFillPoint = true
 						}
 					}
-					if BigBindPositionTurn <= 1 { //只在第一轮中有效
-						have_not_fill_point = true
+					if BigBindPositionTurnMap[roomId] <= 1 { //只在第一轮中有效
+						haveNotFillPoint = true
 					}
 
-					if !have_not_fill_point && (len(roundUserDetail)-len(gameMatchAllin) <= 1) {
-						GameEnd()
-					} else if have_not_fill_point {
+					if !haveNotFillPoint && (len(roundUserDetailMap[roomId])-len(gameMatchAllinMap[roomId]) <= 1) {
+						RoomGameEnd(roomId)
+					} else if haveNotFillPoint {
 						//next user
-						if emptySend > 2 { //只是为了排除大小盲
-							positionTurn = getNextPosition(roundUserDetail, positionTurn)
+						if emptySendMap[roomId] > 2 { //只是为了排除大小盲
+							PositionTurnMap[roomId] = getNextPosition(roundUserDetailMap[roomId], PositionTurnMap[roomId])
 							var ok bool
-							_, ok = gameMatchAllin[positionTurn]
+							_, ok = gameMatchAllinMap[roomId][positionTurn]
 							for ok {
-								positionTurn = getNextPosition(roundUserDetail, positionTurn)
-								_, ok = gameMatchAllin[positionTurn]
+								PositionTurnMap[roomId] = getNextPosition(roundUserDetailMap[roomId], PositionTurnMap[roomId])
+								_, ok = gameMatchAllinMap[roomId][positionTurn]
 							}
-							nextRoundInfo()
+							nextRoomRoundInfo(roomId)
 						}
 					} else {
 						//end this round
-						endRoundPoint()
-						nextRoundInfo()
+						endRoomRoundPoint(roomId)
+						nextRoomRoundInfo(roomId)
 					}
-
-					// if !have_not_fill_point && (len(roundUserDetail)-len(gameMatchAllin) <= 1) {
-					// 	GameEnd()
-					// } else if have_not_fill_point && len(roundUserDetail) > (len(gameMatchAllin)+1) {
-					// 	//next user
-					// 	emptySend++
-					// 	if emptySend > 2 {
-					// 		positionTurn = getNextPosition(roundUserDetail, positionTurn)
-					// 		var ok bool
-					// 		_, ok = gameMatchAllin[positionTurn]
-					// 		for ok {
-					// 			positionTurn = getNextPosition(roundUserDetail, positionTurn)
-					// 			_, ok = gameMatchAllin[positionTurn]
-					// 		}
-					// 		nextRoundInfo()
-					// 	}
-					// } else {
-					// 	//end this round
-					// 	endRoundPoint()
-					// 	nextRoundInfo()
-					// }
-				}
-			}
-		case sub := <-subscribe:
-			if nowGameMatch.Id != 0 && nowGameMatch.GameStatus != models.GAME_STATUS_END {
-				sub.Conn.WriteMessage(websocket.TextMessage, []byte("wait Game End"))
-			} else {
-				subscribers.PushBack(sub) // Add user to the end of list.
-				if sub.UserType == models.POKER_PLAYER {
-					gu := models.SetUserReturnPlayer(sub.User)
-
-					var player = new(Player)
-					player.user = sub.User
-					player.Position = gu.Position
-					player.Conn = sub.Conn
-					seat.PushBack(*player)
-					publish <- models.SeatInfo{
-						Type:     models.EVENT_JOIN,
-						GameUser: gu,
-						User:     sub.User.Name,
-					}
-				}
-				if sub.UserType == models.VIEWER {
-					var view = new(Viewer)
-					view.uname = sub.Name
-					view.Conn = sub.Conn
-					viewerList.PushBack(*view)
-				}
-			}
-
-			// Publish a JOIN event.
-			// publish <- newEvent(models.EVENT_JOIN, sub.Name, "")
-			// logs.Info("User:", sub.Name, ";WebSocket:", sub.Conn != nil)
-		case event := <-publish:
-			// Notify waiting list.
-			for ch := waitingList.Back(); ch != nil; ch = ch.Prev() {
-				ch.Value.(chan bool) <- true
-				waitingList.Remove(ch)
-			}
-
-			if event.Type == models.EVENT_JOIN {
-				for ss := seat.Front(); ss != nil; ss = ss.Next() {
-					if ss.Value.(Player).user.Name == event.User {
-						ws := ss.Value.(Player).Conn
-						if ws != nil {
-							msg, _ := json.Marshal(event)
-							if ws.WriteMessage(websocket.TextMessage, msg) != nil {
-								// User disconnected.
-								unsubscribe <- ss.Value.(Player).user
-							}
-						}
-						break
-					}
-				}
-			}
-
-			userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
-
-			// broadcastWebSocket(event)
-			// models.NewArchive(event)
-
-			if event.Type == models.EVENT_MESSAGE {
-				logs.Info("Message from", event.User, ";Content:", event.GameUser)
-			}
-		case unsub := <-unsubscribe:
-			for ss := seat.Front(); ss != nil; ss = ss.Next() {
-				if ss.Value.(Player).user == unsub {
-					seat.Remove(ss)
-					delete(roundUserDetail, ss.Value.(Player).Position)
-					models.RemoveGameUser(unsub.Id, 1)
-					// Clone connection.
-					ws := ss.Value.(Player).Conn
-					if ws != nil {
-						ws.Close()
-						logs.Error("WebSocket closed:", unsub.Name)
-					}
-					publish <- models.SeatInfo{
-						Type: models.EVENT_LEAVE,
-						GameUser: models.GameUser{
-							Position: ss.Value.(Player).Position,
-						},
-						User: unsub.Name,
-					} // Publish a LEAVE event.
-					if seat.Len() == 1 {
-						GameEnd()
-					}
-					if seat.Len() == 0 {
-						nowGameMatch.GameStatus = "END"
-					}
-					break
 				}
 			}
 		}
@@ -324,11 +174,11 @@ func startRoomGame(RoomId int) {
 	changeGameMatch(RoomId,models.GAME_STATUS_ROUND1)
 
 	//初始化座位
-	detailArr = models.GetRoundUserDetail(RoomId)
+	DetailArrMap[RoomId] = models.GetRoundUserDetail(RoomId)
 	roundUserDetailMap[RoomId] = make(map[int]models.InRoundUserDetail)
 	logs.Info("init seat")
 	logs.Info(detailArr)
-	for _, v := range detailArr {
+	for _, v := range DetailArrMap[RoomId] {
 		roundUserDetailMap[RoomId][v.Position] = v
 	}
 	logs.Info(roundUserDetailMap[RoomId])
@@ -454,114 +304,275 @@ func RoomGameEnd(RoomId int) {
 			break
 		}
 	} else {
-		//写到这了
-		winUserPos = CalWinUser()
+		winUserPos = CalWinUserInRoom(RoomId)
 	}
 	//计算获胜点数
-	nowGameMatch.PotAll = nowGameMatch.Pot1st + nowGameMatch.Pot2nd + nowGameMatch.Pot3rd + nowGameMatch.Pot4th
-	for _, v := range roundUserDetail {
-		nowGameMatch.PotAll += v.RoundPoint
+	nngmm := nowGameMatchMap[RoomId]
+	nngmm.PotAll = nngmm.Pot1st + nngmm.Pot2nd + nngmm.Pot3rd + nngmm.Pot4th
+	for _, v := range roundUserDetailMap[RoomId] {
+		nngmm.PotAll += v.RoundPoint
 	}
 	logs.Info(foldPoint)
 	for _, v := range foldPoint {
-		nowGameMatch.PotAll += v
+		nngmm.PotAll += v
 	}
 
-	if len(gameMatchAllin) > 0 {
-		potAll := nowGameMatch.PotAll                           //总池
-		all_in_point_desc := models.RankByPoint(gameMatchAllin) //根据allin数量进行的排序
-		var cal_user_detail = make(map[int]models.InRoundUserDetail)
-		for k, v := range roundUserDetail {
-			cal_user_detail[k] = v
+
+	if len(gameMatchAllinMap[RoomId]) > 0 {
+		potAll := nngmm.PotAll                                          //总池
+		allInPointDesc := models.RankByPoint(gameMatchAllinMap[RoomId]) //根据allin数量进行的排序
+		var calUserDetail = make(map[int]models.InRoundUserDetail)
+		for k, v := range roundUserDetailMap[RoomId] {
+			calUserDetail[k] = v
 		}
-		cal_all_in_pot := 0 //已结算的allin底池
-
-		logs.Info(potAll)
-		logs.Info(all_in_point_desc)
-		logs.Info(cal_user_detail)
-		logs.Info(cal_all_in_pot)
-
-		for _, v := range all_in_point_desc {
-
-			logs.Info(v)
-
-			need_cal_pot := (v.Value - cal_all_in_pot) * len(cal_user_detail)
-			if need_cal_pot > potAll {
-				need_cal_pot = potAll
+		calAllInPot := 0 //已结算的allin底池
+		for _, v := range allInPointDesc {
+			needCalPot := (v.Value - calAllInPot) * len(calUserDetail)
+			if needCalPot > potAll {
+				needCalPot = potAll
 			}
-			win_user, _ := GetBigUser(cal_user_detail)
-			perPot := need_cal_pot / len(win_user)
-			for _, v := range win_user {
-				models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+			winUser, _ := GetBigUserInRoom(calUserDetail,RoomId)
+			perPot := needCalPot / len(winUser)
+			for _, v := range winUser {
+				models.ChangeUserPoint(roundUserDetailMap[RoomId][v].UserId, perPot)
 				pointDetail[v] += perPot
 			}
-			cal_all_in_pot = v.Value
-			potAll -= need_cal_pot
-			delete(cal_user_detail, v.Key)
+			calAllInPot = v.Value
+			potAll -= needCalPot
+			delete(calUserDetail, v.Key)
 
-			logs.Info(need_cal_pot)
-			logs.Info(perPot)
-			logs.Info(cal_all_in_pot)
-			logs.Info(potAll)
 		}
-		logs.Info(pointDetail)
 		if potAll > 0 { //cal_user_detail中还剩余多个未allin玩家时未出现
-			var win_user2 []int
-			logs.Info(cal_user_detail)
-			logs.Info(len(cal_user_detail))
-			logs.Info(len(cal_user_detail) > 0)
-			logs.Info(roundUserDetail)
-			// if len(cal_user_detail) > 0 {
-			// 	win_user2, _ = GetBigUser(cal_user_detail)
-			// } else {
-			// 	win_user2, _ = GetBigUser(roundUserDetail)
-			// }
-			logs.Info(win_user2)
-			win_user2, _ = GetBigUser(roundUserDetail)
+			var winUser2 []int
+			winUser2, _ = GetBigUserInRoom(roundUserDetailMap[RoomId],RoomId)
 
-			perPot := potAll / len(win_user2)
-			logs.Info(roundUserDetail)
-			for _, v := range win_user2 {
-				models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+			perPot := potAll / len(winUser2)
+			for _, v := range winUser2 {
+				models.ChangeUserPoint(roundUserDetailMap[RoomId][v].UserId, perPot)
 				pointDetail[v] += perPot
 			}
-			logs.Info(pointDetail)
 		}
 
 	} else if len(winUserPos) > 0 {
-		perPot := nowGameMatch.PotAll / len(winUserPos)
+		perPot := nngmm.PotAll / len(winUserPos)
 		for _, v := range winUserPos {
-			models.ChangeUserPoint(roundUserDetail[v].UserId, perPot)
+			models.ChangeUserPoint(roundUserDetailMap[RoomId][v].UserId, perPot)
 			pointDetail[v] = perPot
 		}
 	}
 
-	// if len(winUserPos) == 1 {
-	// 	if all_point, pok := gameMatchAllin[winUserPos[0]]; pok {
-	// 		models.ChangeUserPoint(roundUserDetail[winUserPos[0]].UserId, all_point*2)
-
-	// 	} else {
-	// 		models.ChangeUserPoint(roundUserDetail[winUserPos[0]].UserId, nowGameMatch.PotAll)
-	// 	}
-	// } else {
-
-	// }
-
-	nowGameMatch.GameStatus = models.GAME_STATUS_END
-	models.UpdateGameMatchStatus(nowGameMatch, "game_status")
-	models.UpdateGameMatchStatus(nowGameMatch, "pot1st")
-	models.UpdateGameMatchStatus(nowGameMatch, "pot2nd")
-	models.UpdateGameMatchStatus(nowGameMatch, "pot3rd")
-	models.UpdateGameMatchStatus(nowGameMatch, "pot4th")
-	models.UpdateGameMatchStatus(nowGameMatch, "pot_all")
-
+	nngmm.GameStatus = models.GAME_STATUS_END
+	models.UpdateGameMatchStatus(nngmm, "game_status")
+	models.UpdateGameMatchStatus(nngmm, "pot1st")
+	models.UpdateGameMatchStatus(nngmm, "pot2nd")
+	models.UpdateGameMatchStatus(nngmm, "pot3rd")
+	models.UpdateGameMatchStatus(nngmm, "pot4th")
+	models.UpdateGameMatchStatus(nngmm, "pot_all")
+	nowGameMatchMap[RoomId] = nngmm
 	//提示胜利玩家可以重新开始游戏了
 	logs.Info("game end")
-	tmp_card := models.CardInfo{
+	tmpCard := models.CardInfo{
 		Type: models.EVENT_CLEAR_CARD,
 	}
-	userInfoChannel <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
-	sendMsgToSeat(tmp_card)
-	sendMsgToSeat(newEvent(models.EVENT_GAME_END, "system", "Game End"))
 
+	sendToRoomUser(RoomId,newEvent(models.EVENT_REFRESH_USER_INFO, "", ""))
+	sendToRoomUser(RoomId,tmpCard)
+	sendToRoomUser(RoomId,newEvent(models.EVENT_GAME_END, "system", "Game End"))
+
+}
+
+func CalWinUserInRoom(RoomId int) []int {
+	tmpCardC := make(map[int]string)
+	bigString := ""
+	var winUser []int
+	for k := range roundUserDetailMap[RoomId] {
+		tmpArr := UsersCardMap[RoomId][k]
+		for _, v := range PublicCardMap[RoomId] {
+			tmpArr = append(tmpArr, v)
+		}
+		tmpCardC[k] = models.GetString(tmpArr)
+		if bigString == "" {
+			bigString = models.GetString(tmpArr)
+			winUser = append(winUser, k)
+		}
+	}
+
+	for k, v := range tmpCardC {
+		if bigString == v {
+			continue
+		}
+		result := models.Compare(v, bigString)
+		if result == 1 {
+			winUser = winUser[0:0]
+			winUser = append(winUser, k)
+			bigString = v
+		} else if result == 0 {
+			winUser = append(winUser, k)
+		}
+	}
+
+	var winCard [][]models.Card
+	for _, v := range winUser {
+		winCard = append(winCard, UsersCardMap[RoomId][v])
+	}
+
+	showMaxCard := models.TransMaxHandToCardInfo(bigString)
+	var tmp []models.Card
+	for _, v := range PublicCardMap[RoomId] {
+		tmp = append(tmp, v)
+	}
+	a := models.EndGameCardInfo{
+		Type:       models.EVENT_GAME_END_SHOW_CARD,
+		WinPos:     winUser,
+		WinCard:    winCard,
+		PublicCard: tmp,
+		// BigCard:    models.StringToCard(bigString),\
+		BigCard:   showMaxCard,
+		UserCards: UsersCardMap[RoomId],
+	}
+	sendToRoomUser(RoomId,a)
+
+	return winUser
+}
+
+//传入当前仍在场的用户
+func GetBigUserInRoom(iru map[int]models.InRoundUserDetail,RoomId int) ([]int, string) {
+	tmpCardC := make(map[int]string)
+	bigString := ""
+	var winUser uint64
+	for k := range iru {
+		tmpArr := UsersCardMap[RoomId][k]
+		for _, v := range PublicCardMap[RoomId] {
+			tmpArr = append(tmpArr, v)
+		}
+		tmpCardC[k] = models.GetString(tmpArr)
+		if bigString == "" {
+			bigString = models.GetString(tmpArr)
+			winUser = 1 << k
+		}
+	}
+
+	for k, v := range tmpCardC {
+		if bigString == v {
+			continue
+		}
+		result := models.Compare(v, bigString)
+		if result == 1 {
+			winUser = 1 << k
+			bigString = v
+		} else if result == 0 {
+			winUser |= 1 << k
+		}
+	}
+
+	var winUserArr []int
+	i := 0
+	for winUser > 0 {
+		if winUser&1 > 0 {
+			winUserArr = append(winUserArr, i)
+		}
+		winUser = winUser >> 1
+		i++
+	}
+	return winUserArr, bigString
+}
+
+/**
+标志着一轮的结束
+**/
+func endRoomRoundPoint(RoomId int) {
+	roundCheckNumber = 0
+	if _, ok := roundUserDetailMap[RoomId][nowGameMatchMap[RoomId].SmallBindPosition]; ok {
+		PositionTurnMap[RoomId] = nowGameMatchMap[RoomId].SmallBindPosition
+	} else {
+		PositionTurnMap[RoomId] = getNextPosition(roundUserDetailMap[RoomId], nowGameMatchMap[RoomId].SmallBindPosition)
+	}
+	LimitPointMap[RoomId] = 0
+	var nextRound string
+	tmpGameMatch := nowGameMatchMap[RoomId]
+	switch tmpGameMatch.GameStatus {
+	case models.GAME_STATUS_ROUND1:
+		nextRound = models.GAME_STATUS_ROUND2
+		tmpGameMatch.Pot1st = getRoomRoundPoint(RoomId, true)
+		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][1]))
+		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][2]))
+		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][3]))
+	case models.GAME_STATUS_ROUND2:
+		nextRound = models.GAME_STATUS_ROUND3
+		tmpGameMatch.Pot2nd = getRoomRoundPoint(RoomId, true)
+		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][4]))
+	case models.GAME_STATUS_ROUND3:
+		nextRound = models.GAME_STATUS_ROUND4
+		tmpGameMatch.Pot3rd = getRoomRoundPoint(RoomId, true)
+		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][5]))
+	case models.GAME_STATUS_ROUND4:
+		nextRound = models.GAME_STATUS_END
+		tmpGameMatch.Pot4th = getRoomRoundPoint(RoomId, true)
+	}
+
+	logs.Info("end round" + nowGameMatch.GameStatus)
+	tmpGameMatch.GameStatus = nextRound
+
+	if tmpGameMatch.GameStatus == models.GAME_STATUS_END {
+		//需比较剩余玩家的卡牌大小
+		GameEnd()
+	}
+	nowGameMatchMap[RoomId] = tmpGameMatch
+}
+
+func getRoomRoundPoint(RoomId int, clear bool) int {
+	var remainRoundPoint int
+	for k, v := range roundUserDetailMap[RoomId] {
+		remainRoundPoint += v.RoundPoint
+		if clear {
+			a := roundUserDetailMap[RoomId][k]
+			a.RoundPoint = 0
+			roundUserDetailMap[RoomId][k] = a
+		}
+	}
+	remainRoundPoint += FoldPointMap[RoomId][nowGameMatchMap[RoomId].GameStatus]
+	if clear {
+		FoldPointMap[RoomId][nowGameMatch.GameStatus] = 0
+	}
+
+	switch nowGameMatchMap[RoomId].GameStatus {
+	case "ROUND1":
+		return nowGameMatchMap[RoomId].Pot1st + remainRoundPoint
+	case "ROUND2":
+		return nowGameMatchMap[RoomId].Pot2nd + remainRoundPoint
+	case "ROUND3":
+		return nowGameMatchMap[RoomId].Pot3rd + remainRoundPoint
+	case "ROUND4":
+		return nowGameMatchMap[RoomId].Pot4th + remainRoundPoint
+	}
+	return 0
+}
+
+func nextRoomRoundInfo(RoomId int){
+	tmp := roundUserDetailMap[RoomId][PositionTurnMap[RoomId]]
+	tmp.AllowOp = tmp.AllowOp[0:0]
+	if LimitPointMap[RoomId] == 0 {
+		tmp.AllowOp = append(tmp.AllowOp, "check")
+	}
+	if tmp.RoundPoint+tmp.Point >= LimitPointMap[RoomId] && LimitPointMap[RoomId] > 0 {
+		tmp.AllowOp = append(tmp.AllowOp, "call")
+	}
+	if tmp.RoundPoint+tmp.Point > LimitPointMap[RoomId] {
+		tmp.AllowOp = append(tmp.AllowOp, "raise")
+	}
+	tmp.AllowOp = append(tmp.AllowOp, "allin")
+	tmp.AllowOp = append(tmp.AllowOp, "fold")
+
+	roundUserDetailMap[RoomId][PositionTurnMap[RoomId]] = tmp
+
+	data := models.RoundInfo{
+		Type:        models.EVENT_ROUND_INFO,
+		GM:          nowGameMatchMap[RoomId],
+		NowPosition: PositionTurnMap[RoomId],
+		MaxPoint:    LimitPointMap[RoomId],
+	}
+
+	data.Detail = tmp
+	data.AllPointInRound = getRoomRoundPoint(RoomId, false)
+	sendToRoomUser(RoomId,data)
 }
