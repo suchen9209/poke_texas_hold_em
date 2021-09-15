@@ -25,42 +25,83 @@ import (
 )
 
 var (
+	roomManageOpenList = make(chan int)
+	roomManageCloseList = make(chan int)
+
 	UserConnMap = make(map[int] *websocket.Conn)	//记录用户ws连接
 
-	userInfoChannelMap      map[int]chan models.Event	//用户信息
-	roundProcessMap         map[int]chan models.RoundInfo
-	userOperationProcessMap map[int]chan models.UserOperationMsg	//用户操作
-	gameOpMap               map[int]chan string		//游戏操作 控制游戏进程
-	PositionTurnMap         map[int]int //记录当前轮到的玩家位置
-	LimitPointMap           map[int]int //当前轮最小点数值
+	userInfoChannelMap  = make(map[int]chan models.Event)	//用户信息
+	roundProcessMap      = make(   map[int]chan models.RoundInfo)
+	userOperationProcessMap= make( map[int]chan models.UserOperationMsg)	//用户操作
+	gameOpMap             = make(  map[int]chan string	)	//游戏操作 控制游戏进程
+	PositionTurnMap       = make(  map[int]int )//记录当前轮到的玩家位置
+	LimitPointMap         = make(  map[int]int) //当前轮最小点数值
 
-	nowGameMatchMap map[int]models.GameMatch	//当前游戏的详情
+	nowGameMatchMap= make( map[int]models.GameMatch	)//当前游戏的详情
 
-	roundUserDetailMap map[int]map[int]models.InRoundUserDetail
+	roundUserDetailMap= make( map[int]map[int]models.InRoundUserDetail)
 
-	emptySendMap  map[int]int //游戏结束时清零 仅用于记录大小盲
-	DetailArrMap map[int][]models.InRoundUserDetail
+	emptySendMap = make( map[int]int) //游戏结束时清零 仅用于记录大小盲
+	DetailArrMap= make( map[int][]models.InRoundUserDetail)
 
-	RoundCheckNumberMap map[int]int
+	RoundCheckNumberMap= make( map[int]int)
 
 
-	gameMatchAllinMap map[int]map[int]int //allin的位置和point
+	gameMatchAllinMap= make( map[int]map[int]int )//allin的位置和point
 
-	FoldPointMap map[int]map[string]int
+	FoldPointMap= make( map[int]map[string]int)
 
-	BigBindPositionTurnMap map[int]int
+	BigBindPositionTurnMap= make( map[int]int)
 
-	GameAllCardMap map[int]map[int]models.Card
-	PublicCardMap map[int]map[int]models.Card
+	GameAllCardMap= make( map[int]map[int]models.Card)
+	PublicCardMap = make(map[int]map[int]models.Card)
 
-	UsersCardMap map[int]map[int][]models.Card
+	UsersCardMap = make(map[int]map[int][]models.Card)
 )
+
+func roomManage(){
+	logs.Info("a")
+	for {
+		select {
+		case openRoomId := <-roomManageOpenList:
+			logs.Info("b")
+			//userInfoChannelMap[openRoomId] = make(chan models.Event)
+			gameOpMap[openRoomId] = make(chan string ,1000)
+			userOperationProcessMap[openRoomId] = make(chan models.UserOperationMsg ,1000)
+			userInfoChannelMap[openRoomId] = make(chan models.Event,1000)
+			roundProcessMap[openRoomId] = make(chan models.RoundInfo,1000)
+			roundUserDetailMap[openRoomId] = make(map[int]models.InRoundUserDetail)
+			PositionTurnMap[openRoomId] = 0
+			LimitPointMap[openRoomId] = 0
+			nowGameMatchMap[openRoomId] = models.GameMatch{}
+			emptySendMap[openRoomId] = 0
+			DetailArrMap[openRoomId] = []models.InRoundUserDetail{}
+			RoundCheckNumberMap[openRoomId] = 0
+			gameMatchAllinMap[openRoomId] = make(map[int]int )
+			FoldPointMap[openRoomId] = make(map[string]int )
+			GameAllCardMap[openRoomId] = make(map[int]models.Card )
+			PublicCardMap[openRoomId] = make(map[int]models.Card )
+			UsersCardMap[openRoomId] = make(map[int][]models.Card )
+			go gameRoom(openRoomId)
+		case closeRoomId := <-roomManageCloseList:
+			str := "close"
+			gameOpMap[closeRoomId] <- str
+		}
+	}
+}
+
+func init(){
+	logs.Info("77")
+	go roomManage()
+}
 
 // This function handles all incoming chan messages.
 func gameRoom(roomId int) {
+	logs.Info("abd")
 	for {
 		select {
 		case op := <-gameOpMap[roomId]:
+			logs.Info("in here")
 			if op == "start" {
 				if nowGameMatchMap[roomId].Id == 0 || nowGameMatchMap[roomId].GameStatus == models.GAME_STATUS_END {
 					startRoomGame(roomId)
@@ -69,6 +110,28 @@ func gameRoom(roomId int) {
 			if op == "close"{
 				models.CloseRoom(roomId)
 				return
+			}
+		case roundInfo := <- roundProcessMap[roomId]:
+			switch roundInfo.Type {
+			case models.EVENT_ROUND_INFO:
+				tmp := roundUserDetailMap[roomId][roundInfo.NowPosition]
+				tmp.AllowOp = tmp.AllowOp[0:0]
+				if LimitPointMap[roomId] == 0 {
+					tmp.AllowOp = append(tmp.AllowOp, "check")
+				}
+				if tmp.RoundPoint+tmp.Point >= LimitPointMap[roomId] && LimitPointMap[roomId] > 0 {
+					tmp.AllowOp = append(tmp.AllowOp, "call")
+				}
+				if tmp.RoundPoint+tmp.Point > LimitPointMap[roomId] {
+					tmp.AllowOp = append(tmp.AllowOp, "raise")
+				}
+				tmp.AllowOp = append(tmp.AllowOp, "allin")
+				tmp.AllowOp = append(tmp.AllowOp, "fold")
+
+				roundUserDetailMap[roomId][roundInfo.NowPosition] = tmp
+				roundInfo.Detail = roundUserDetailMap[roomId][roundInfo.NowPosition]
+				roundInfo.AllPointInRound = getRoomRoundPoint(roomId, false)
+				sendToRoomUser(roomId,roundInfo)
 			}
 		case uop := <-userOperationProcessMap[roomId]:
 			emptySendMap[roomId]++
@@ -99,7 +162,7 @@ func gameRoom(roomId int) {
 			}
 			models.AddGameMatchLog(uop.GameMatchLog)
 			sendToRoomUser(roomId,uop)
-			userInfoChannelMap[roomId] <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
+			SendUserPointInfoToRoom(roomId)
 			// logs.Info("after user operation")
 			// logs.Info(roundUserDetail)
 			if len(roundUserDetailMap[roomId]) <= 1 {
@@ -108,7 +171,7 @@ func gameRoom(roomId int) {
 			} else {
 				if fromCheck {
 					if RoundCheckNumberMap[roomId] < len(roundUserDetailMap[roomId]) {
-						PositionTurnMap[roomId] = getNextPosition(roundUserDetailMap[roomId], PositionTurnMap[roomId])
+						PositionTurnMap[roomId] = getNextPositionInRoom(roomId, PositionTurnMap[roomId])
 					} else {
 						endRoomRoundPoint(roomId)
 					}
@@ -130,12 +193,14 @@ func gameRoom(roomId int) {
 						RoomGameEnd(roomId)
 					} else if haveNotFillPoint {
 						//next user
+						logs.Info(emptySendMap[roomId])
+						logs.Info(PositionTurnMap[roomId])
 						if emptySendMap[roomId] > 2 { //只是为了排除大小盲
-							PositionTurnMap[roomId] = getNextPosition(roundUserDetailMap[roomId], PositionTurnMap[roomId])
+							PositionTurnMap[roomId] = getNextPositionInRoom(roomId, PositionTurnMap[roomId])
 							var ok bool
 							_, ok = gameMatchAllinMap[roomId][positionTurn]
 							for ok {
-								PositionTurnMap[roomId] = getNextPosition(roundUserDetailMap[roomId], PositionTurnMap[roomId])
+								PositionTurnMap[roomId] = getNextPositionInRoom(roomId, PositionTurnMap[roomId])
 								_, ok = gameMatchAllinMap[roomId][positionTurn]
 							}
 							nextRoomRoundInfo(roomId)
@@ -152,13 +217,16 @@ func gameRoom(roomId int) {
 }
 
 func startRoomGame(RoomId int) {
+	logs.Info(RoomId)
 	//游戏结束时清零 仅用于记录大小盲
 	emptySendMap[RoomId] = 0
+	BigBindPositionTurnMap[RoomId] = 0
 	//清除上局剩余的用户信息，例如卡牌信息等
-	userInfoChannelMap[RoomId] <- newEvent(models.EVENT_REFRESH_USER_INFO, "", "")
+	SendUserPointInfoToRoom(RoomId)
 	nowGameMatchMap[RoomId] = models.InitGameMatch(RoomId)
 	initCardMap(RoomId)
 	gameMatchAllinMap[RoomId] = make(map[int]int)
+
 	changeGameMatch(RoomId,models.GAME_STATUS_LICENSING)
 
 	tmpCard := models.CardInfo{
@@ -177,7 +245,6 @@ func startRoomGame(RoomId int) {
 	DetailArrMap[RoomId] = models.GetRoundUserDetail(RoomId)
 	roundUserDetailMap[RoomId] = make(map[int]models.InRoundUserDetail)
 	logs.Info("init seat")
-	logs.Info(detailArr)
 	for _, v := range DetailArrMap[RoomId] {
 		roundUserDetailMap[RoomId][v.Position] = v
 	}
@@ -215,14 +282,17 @@ func startRoomGame(RoomId int) {
 
 	//发送消息 通知小盲，大盲位置，已下注5 10
 	LimitPointMap[RoomId] = 10
-	PositionTurnMap[RoomId] = PositionTurnMap[RoomId] + 1
-	if positionTurn > len(roundUserDetailMap[RoomId]) {
+	PositionTurnMap[RoomId] ++
+	logs.Info(PositionTurnMap)
+	logs.Info(roundUserDetailMap)
+	if PositionTurnMap[RoomId] > len(roundUserDetailMap[RoomId]) {
 		PositionTurnMap[RoomId] = 1
 	}
-	if _, ok := roundUserDetailMap[RoomId][positionTurn]; !ok {
+	if _, ok := roundUserDetailMap[RoomId][PositionTurnMap[RoomId]]; !ok {
 		PositionTurnMap[RoomId] = nowGameMatchMap[RoomId].SmallBindPosition
 	}
-	roomNextRoundInfo(RoomId)
+	logs.Info(PositionTurnMap)
+	nextRoomRoundInfo(RoomId)
 }
 
 func roomOpChangePoint(point int, position int,roomId int) {
@@ -375,7 +445,7 @@ func RoomGameEnd(RoomId int) {
 		Type: models.EVENT_CLEAR_CARD,
 	}
 
-	sendToRoomUser(RoomId,newEvent(models.EVENT_REFRESH_USER_INFO, "", ""))
+	SendUserPointInfoToRoom(RoomId)
 	sendToRoomUser(RoomId,tmpCard)
 	sendToRoomUser(RoomId,newEvent(models.EVENT_GAME_END, "system", "Game End"))
 
@@ -481,11 +551,11 @@ func GetBigUserInRoom(iru map[int]models.InRoundUserDetail,RoomId int) ([]int, s
 标志着一轮的结束
 **/
 func endRoomRoundPoint(RoomId int) {
-	roundCheckNumber = 0
+	RoundCheckNumberMap[RoomId] = 0
 	if _, ok := roundUserDetailMap[RoomId][nowGameMatchMap[RoomId].SmallBindPosition]; ok {
 		PositionTurnMap[RoomId] = nowGameMatchMap[RoomId].SmallBindPosition
 	} else {
-		PositionTurnMap[RoomId] = getNextPosition(roundUserDetailMap[RoomId], nowGameMatchMap[RoomId].SmallBindPosition)
+		PositionTurnMap[RoomId] = getNextPositionInRoom(RoomId, nowGameMatchMap[RoomId].SmallBindPosition)
 	}
 	LimitPointMap[RoomId] = 0
 	var nextRound string
@@ -515,7 +585,7 @@ func endRoomRoundPoint(RoomId int) {
 
 	if tmpGameMatch.GameStatus == models.GAME_STATUS_END {
 		//需比较剩余玩家的卡牌大小
-		GameEnd()
+		RoomGameEnd(RoomId)
 	}
 	nowGameMatchMap[RoomId] = tmpGameMatch
 }
@@ -564,7 +634,7 @@ func nextRoomRoundInfo(RoomId int){
 	tmp.AllowOp = append(tmp.AllowOp, "fold")
 
 	roundUserDetailMap[RoomId][PositionTurnMap[RoomId]] = tmp
-
+	logs.Info(roundUserDetailMap)
 	data := models.RoundInfo{
 		Type:        models.EVENT_ROUND_INFO,
 		GM:          nowGameMatchMap[RoomId],
@@ -574,5 +644,27 @@ func nextRoomRoundInfo(RoomId int){
 
 	data.Detail = tmp
 	data.AllPointInRound = getRoomRoundPoint(RoomId, false)
+	sendToRoomUser(RoomId,data)
+}
+
+//用于查找下一个位置的人，有则返回座位号，无则返回false
+func getNextPositionInRoom(RoomId int, InitPosition int) int {
+	userNumber := len(DetailArrMap[RoomId])
+	for i := InitPosition + 1; i <= InitPosition+userNumber; i++ {
+		key := i % userNumber
+		if key == 0 {
+			key = userNumber
+		}
+		if _, ok := roundUserDetailMap[RoomId][key]; ok {
+			return key
+		}
+	}
+	return 0
+}
+
+func SendUserPointInfoToRoom(RoomId int){
+	var data UserInfoMsg
+	data.Type = models.EVENT_REFRESH_USER_INFO
+	data.Info = models.GetUserPointWithSeat(RoomId)
 	sendToRoomUser(RoomId,data)
 }

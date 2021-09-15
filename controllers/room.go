@@ -20,7 +20,7 @@ var user models.User
 func (r *RoomController) Prepare() {
 	s, _ := beego.AppConfig.String("session_name")
 	sessionData := r.GetSession(s)
-	logs.Info(sessionData)
+	//logs.Info(sessionData)
 	if sessionData == nil {
 		r.Redirect("/", 302)
 		return
@@ -53,7 +53,7 @@ func (r *RoomController) Get() {
 	r.TplName = "room/room_list.html"
 	r.Data["UserName"] = user.Name
 	r.Data["RoomList"] = models.GetOnlineRoom()
-	logs.Info(r.Data["RoomList"])
+	//logs.Info(r.Data["RoomList"])
 }
 
 func (r *RoomController) Create() {
@@ -64,7 +64,7 @@ func (r *RoomController) Create() {
 func (r *RoomController) EntryRoom() {
 	roomID := r.Ctx.Input.Param(":id")
 
-	logs.Info(roomID)
+	//logs.Info(roomID)
 	r.TplName = "room/game_room.html"
 	r.Data["IsGameRoom"] = true
 	r.Data["User"] = user
@@ -74,7 +74,7 @@ func (r *RoomController) EntryRoom() {
 func (r *RoomController) RoomSocket() {
 	user := r.GetSession("USER")
 	roomID, err := strconv.Atoi(r.Ctx.Input.Param(":id"))
-	logs.Info(user)
+	//logs.Info(user)
 	if user == nil || err != nil{
 		r.Redirect("/", 302)
 		return
@@ -103,7 +103,14 @@ func (r *RoomController) RoomSocket() {
 
 	UserConnMap[u.Id] = ws
 
-	models.SetUserIntoRoom(u,roomID)
+	gu := models.SetUserIntoRoom(u,roomID)
+	msg, _ := json.Marshal(models.SeatInfo{
+		Type:     models.EVENT_JOIN,
+		GameUser: gu,
+		User:     "",
+	})
+
+	ws.WriteMessage(websocket.TextMessage, msg)
 
 	defer Leave(u)
 
@@ -152,10 +159,15 @@ func (r *RoomController) Post() {
 	}
 	roomId := models.CreateRoom(&room)
 	if roomId > 0 {
-		go gameRoom(int(roomId))
+		roomManageOpenList <- int(roomId)
 		r.Redirect("/room/entry/"+strconv.FormatInt(roomId, 10), 302)
 	} else {
 		r.Redirect("/room", 302)
 		return
 	}
+}
+
+func sendChan(roomId int){
+	//logs.Info("164")
+	roomManageOpenList <- roomId
 }

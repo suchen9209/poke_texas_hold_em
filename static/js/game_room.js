@@ -27,20 +27,15 @@ $(document).ready(function () {
         var data = JSON.parse(event.data);
         // var li = document.createElement('li');
         let pos_str;
-        if(data.Type != 3){
-            console.log(data);
-        }
+
+        console.log(data);
+
         
         switch (data.Type) {
         case 0: // JOIN
-            if (data.User == uname) {
-                //You joined the chat room.
-                my_position = data.GameUser.Position
-                user_id = data.GameUser.UserId
-            }
-            // pos_str = "#pos" + data.GameUser.Position;
-            // $(pos_str + " .user_name").html(data.User);
-
+            //You joined the chat room.
+            my_position = data.GameUser.Position
+            user_id = data.GameUser.UserId
             break;
         case 1: // LEAVE
             // li.innerText = data.User + ' left the chat room.';

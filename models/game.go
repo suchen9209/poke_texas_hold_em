@@ -182,7 +182,7 @@ func TruncateGameUser() {
 
 func GetUserPointWithSeat(gid int) []UserPointSeat {
 	var gu []UserPointSeat
-	o.Raw(`select gu.user_id,u.name,gu.position, u.point from game_user as gu left join user as u on u.id = gu.user_id where gu.game_id = ?`).SetArgs(1).QueryRows(&gu)
+	o.Raw(`select gu.user_id,u.name,gu.position, u.point from game_user as gu left join user as u on u.id = gu.user_id where gu.game_id = ?`).SetArgs(gid).QueryRows(&gu)
 	return gu
 }
 
@@ -207,7 +207,10 @@ func InitGameMatch(gid int) GameMatch {
 	}
 	newGame.BigBindPosition = getPosition(newGame.SmallBindPosition, tmpMap)
 	newGame.GameStatus = "INIT"
-	o.Insert(&newGame)
+	_,err := o.Insert(&newGame)
+	if err != nil{
+		panic(err)
+	}
 	return newGame
 
 }

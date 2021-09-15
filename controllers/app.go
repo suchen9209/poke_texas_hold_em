@@ -85,9 +85,9 @@ func (a *AppController) Login() {
 		Name:     uname,
 		Password: fmt.Sprintf("%x", md5.Sum([]byte(pwd+salt))),
 	}
-	logs.Info(u)
+	//logs.Info(u)
 	models.CheckUserLogin(&u)
-	logs.Info(u)
+	//logs.Info(u)
 	if u.Id > 0 {
 		a.SetSession("USER", u)
 		a.Redirect("/room", 302)
