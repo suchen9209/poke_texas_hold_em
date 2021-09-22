@@ -25,51 +25,48 @@ import (
 )
 
 var (
-	roomManageOpenList = make(chan int)
+	roomManageOpenList  = make(chan int)
 	roomManageCloseList = make(chan int)
 
-	UserConnMap = make(map[int] *websocket.Conn)	//记录用户ws连接
+	UserConnMap = make(map[int]*websocket.Conn) //记录用户ws连接
 
-	userInfoChannelMap  = make(map[int]chan models.Event)	//用户信息
-	roundProcessMap      = make(   map[int]chan models.RoundInfo)
-	userOperationProcessMap= make( map[int]chan models.UserOperationMsg)	//用户操作
-	gameOpMap             = make(  map[int]chan string	)	//游戏操作 控制游戏进程
-	PositionTurnMap       = make(  map[int]int )//记录当前轮到的玩家位置
-	LimitPointMap         = make(  map[int]int) //当前轮最小点数值
+	userInfoChannelMap      = make(map[int]chan models.Event) //用户信息
+	roundProcessMap         = make(map[int]chan models.RoundInfo)
+	userOperationProcessMap = make(map[int]chan models.UserOperationMsg) //用户操作
+	gameOpMap               = make(map[int]chan string)                  //游戏操作 控制游戏进程
+	PositionTurnMap         = make(map[int]int)                          //记录当前轮到的玩家位置
+	LimitPointMap           = make(map[int]int)                          //当前轮最小点数值
 
-	nowGameMatchMap= make( map[int]models.GameMatch	)//当前游戏的详情
+	nowGameMatchMap = make(map[int]models.GameMatch) //当前游戏的详情
 
-	roundUserDetailMap= make( map[int]map[int]models.InRoundUserDetail)
+	roundUserDetailMap = make(map[int]map[int]models.InRoundUserDetail)
 
-	emptySendMap = make( map[int]int) //游戏结束时清零 仅用于记录大小盲
-	DetailArrMap= make( map[int][]models.InRoundUserDetail)
+	emptySendMap = make(map[int]int) //游戏结束时清零 仅用于记录大小盲
+	DetailArrMap = make(map[int][]models.InRoundUserDetail)
 
-	RoundCheckNumberMap= make( map[int]int)
+	RoundCheckNumberMap = make(map[int]int)
 
+	gameMatchAllinMap = make(map[int]map[int]int) //allin的位置和point
 
-	gameMatchAllinMap= make( map[int]map[int]int )//allin的位置和point
+	FoldPointMap = make(map[int]map[string]int)
 
-	FoldPointMap= make( map[int]map[string]int)
+	BigBindPositionTurnMap = make(map[int]int)
 
-	BigBindPositionTurnMap= make( map[int]int)
-
-	GameAllCardMap= make( map[int]map[int]models.Card)
-	PublicCardMap = make(map[int]map[int]models.Card)
+	GameAllCardMap = make(map[int]map[int]models.Card)
+	PublicCardMap  = make(map[int]map[int]models.Card)
 
 	UsersCardMap = make(map[int]map[int][]models.Card)
 )
 
-func roomManage(){
-	logs.Info("a")
+func roomManage() {
 	for {
 		select {
 		case openRoomId := <-roomManageOpenList:
-			logs.Info("b")
 			//userInfoChannelMap[openRoomId] = make(chan models.Event)
-			gameOpMap[openRoomId] = make(chan string ,1000)
-			userOperationProcessMap[openRoomId] = make(chan models.UserOperationMsg ,1000)
-			userInfoChannelMap[openRoomId] = make(chan models.Event,1000)
-			roundProcessMap[openRoomId] = make(chan models.RoundInfo,1000)
+			gameOpMap[openRoomId] = make(chan string, 1000)
+			userOperationProcessMap[openRoomId] = make(chan models.UserOperationMsg, 1000)
+			userInfoChannelMap[openRoomId] = make(chan models.Event, 1000)
+			roundProcessMap[openRoomId] = make(chan models.RoundInfo, 1000)
 			roundUserDetailMap[openRoomId] = make(map[int]models.InRoundUserDetail)
 			PositionTurnMap[openRoomId] = 0
 			LimitPointMap[openRoomId] = 0
@@ -77,11 +74,11 @@ func roomManage(){
 			emptySendMap[openRoomId] = 0
 			DetailArrMap[openRoomId] = []models.InRoundUserDetail{}
 			RoundCheckNumberMap[openRoomId] = 0
-			gameMatchAllinMap[openRoomId] = make(map[int]int )
-			FoldPointMap[openRoomId] = make(map[string]int )
-			GameAllCardMap[openRoomId] = make(map[int]models.Card )
-			PublicCardMap[openRoomId] = make(map[int]models.Card )
-			UsersCardMap[openRoomId] = make(map[int][]models.Card )
+			gameMatchAllinMap[openRoomId] = make(map[int]int)
+			FoldPointMap[openRoomId] = make(map[string]int)
+			GameAllCardMap[openRoomId] = make(map[int]models.Card)
+			PublicCardMap[openRoomId] = make(map[int]models.Card)
+			UsersCardMap[openRoomId] = make(map[int][]models.Card)
 			go gameRoom(openRoomId)
 		case closeRoomId := <-roomManageCloseList:
 			str := "close"
@@ -90,7 +87,7 @@ func roomManage(){
 	}
 }
 
-func init(){
+func init() {
 	logs.Info("77")
 	go roomManage()
 }
@@ -107,11 +104,11 @@ func gameRoom(roomId int) {
 					startRoomGame(roomId)
 				}
 			}
-			if op == "close"{
+			if op == "close" {
 				models.CloseRoom(roomId)
 				return
 			}
-		case roundInfo := <- roundProcessMap[roomId]:
+		case roundInfo := <-roundProcessMap[roomId]:
 			switch roundInfo.Type {
 			case models.EVENT_ROUND_INFO:
 				tmp := roundUserDetailMap[roomId][roundInfo.NowPosition]
@@ -131,7 +128,7 @@ func gameRoom(roomId int) {
 				roundUserDetailMap[roomId][roundInfo.NowPosition] = tmp
 				roundInfo.Detail = roundUserDetailMap[roomId][roundInfo.NowPosition]
 				roundInfo.AllPointInRound = getRoomRoundPoint(roomId, false)
-				sendToRoomUser(roomId,roundInfo)
+				sendToRoomUser(roomId, roundInfo)
 			}
 		case uop := <-userOperationProcessMap[roomId]:
 			emptySendMap[roomId]++
@@ -142,17 +139,17 @@ func gameRoom(roomId int) {
 			}
 			switch uop.GameMatchLog.Operation {
 			case models.GAME_OP_RAISE: //raise
-				roomOpChangePoint(uop.GameMatchLog.PointNumber, uop.Position,roomId)
+				roomOpChangePoint(uop.GameMatchLog.PointNumber, uop.Position, roomId)
 			case models.GAME_OP_CALL: //call
 				uop.GameMatchLog.PointNumber = LimitPointMap[roomId] - roundUserDetailMap[roomId][uop.Position].RoundPoint
-				roomOpChangePoint(uop.GameMatchLog.PointNumber, uop.Position,roomId)
+				roomOpChangePoint(uop.GameMatchLog.PointNumber, uop.Position, roomId)
 			case models.GAME_OP_CHECK: //check
 				RoundCheckNumberMap[roomId]++
 				fromCheck = true
 			case models.GAME_OP_ALLIN: // allin
 				userRePoint := models.GetUserPoint(roundUserDetailMap[roomId][uop.Position].UserId)
 				uop.GameMatchLog.PointNumber = userRePoint
-				roomOpChangePoint(uop.GameMatchLog.PointNumber, uop.Position,roomId)
+				roomOpChangePoint(uop.GameMatchLog.PointNumber, uop.Position, roomId)
 				gameMatchAllinMap[roomId][uop.Position] = roundUserDetailMap[roomId][uop.Position].RoundPoint
 			case models.GAME_OP_FOLD:
 				FoldPointMap[roomId][nowGameMatchMap[roomId].GameStatus] += roundUserDetailMap[roomId][uop.Position].RoundPoint
@@ -161,7 +158,7 @@ func gameRoom(roomId int) {
 				delete(UsersCardMap[roomId], uop.Position)
 			}
 			models.AddGameMatchLog(uop.GameMatchLog)
-			sendToRoomUser(roomId,uop)
+			sendToRoomUser(roomId, uop)
 			SendUserPointInfoToRoom(roomId)
 			// logs.Info("after user operation")
 			// logs.Info(roundUserDetail)
@@ -227,7 +224,7 @@ func startRoomGame(RoomId int) {
 	initCardMap(RoomId)
 	gameMatchAllinMap[RoomId] = make(map[int]int)
 
-	changeGameMatch(RoomId,models.GAME_STATUS_LICENSING)
+	changeGameMatch(RoomId, models.GAME_STATUS_LICENSING)
 
 	tmpCard := models.CardInfo{
 		Type: models.EVENT_CLEAR_CARD,
@@ -239,7 +236,7 @@ func startRoomGame(RoomId int) {
 		var tmpPoker = models.GetOneCardFromCardMap(GameAllCardMap[RoomId])
 		PublicCardMap[RoomId][i] = *tmpPoker
 	}
-	changeGameMatch(RoomId,models.GAME_STATUS_ROUND1)
+	changeGameMatch(RoomId, models.GAME_STATUS_ROUND1)
 
 	//初始化座位
 	DetailArrMap[RoomId] = models.GetRoundUserDetail(RoomId)
@@ -282,7 +279,7 @@ func startRoomGame(RoomId int) {
 
 	//发送消息 通知小盲，大盲位置，已下注5 10
 	LimitPointMap[RoomId] = 10
-	PositionTurnMap[RoomId] ++
+	PositionTurnMap[RoomId]++
 	logs.Info(PositionTurnMap)
 	logs.Info(roundUserDetailMap)
 	if PositionTurnMap[RoomId] > len(roundUserDetailMap[RoomId]) {
@@ -295,7 +292,7 @@ func startRoomGame(RoomId int) {
 	nextRoomRoundInfo(RoomId)
 }
 
-func roomOpChangePoint(point int, position int,roomId int) {
+func roomOpChangePoint(point int, position int, roomId int) {
 	a := roundUserDetailMap[roomId][position]
 	a.RoundPoint = a.RoundPoint + point
 	a.Point = a.Point - point
@@ -316,28 +313,27 @@ func roomNextRoundInfo(RoomId int) {
 	}
 }
 
-
-func initCardMap(roomId int){
+func initCardMap(roomId int) {
 	GameAllCardMap[roomId] = models.GetNewCardMap()
 	PublicCardMap[roomId] = make(map[int]models.Card)
 	UsersCardMap[roomId] = make(map[int][]models.Card)
 }
 
-func changeGameMatch(roomId int,status string){
+func changeGameMatch(roomId int, status string) {
 	tmp := nowGameMatchMap[roomId]
 	tmp.GameStatus = status
 	models.UpdateGameMatchStatus(tmp, "game_status")
 	nowGameMatchMap[roomId] = tmp
 }
 
-func sendToRoomUser(roomId int,data interface{}){
+func sendToRoomUser(roomId int, data interface{}) {
 	positionMap := models.GetRoomUserPositionList(roomId)
 	for _, uid := range positionMap {
-		sendInWs(UserConnMap[uid],data)
+		sendInWs(UserConnMap[uid], data)
 	}
 }
 
-func sendInWs(ws *websocket.Conn,data interface{}){
+func sendInWs(ws *websocket.Conn, data interface{}) {
 	if ws != nil {
 		msg, _ := json.Marshal(data)
 		if ws.WriteMessage(websocket.TextMessage, msg) != nil {
@@ -346,19 +342,18 @@ func sendInWs(ws *websocket.Conn,data interface{}){
 		}
 	}
 }
-func sendCardToUser(roomId int){
+func sendCardToUser(roomId int) {
 	positionMap := models.GetRoomUserPositionList(roomId)
 	for pos, uid := range positionMap {
 		var tmpPoker = models.GetOneCardFromCardMap(GameAllCardMap[roomId])
 		UsersCardMap[roomId][pos] = append(UsersCardMap[roomId][pos], *tmpPoker)
-		sendInWs(UserConnMap[uid],sendCard(models.EVENT_LICENSING, "", pos, *tmpPoker))
+		sendInWs(UserConnMap[uid], sendCard(models.EVENT_LICENSING, "", pos, *tmpPoker))
 
 		var tmpPoker2 = models.GetOneCardFromCardMap(GameAllCardMap[roomId])
 		UsersCardMap[roomId][pos] = append(UsersCardMap[roomId][pos], *tmpPoker2)
-		sendInWs(UserConnMap[uid],sendCard(models.EVENT_LICENSING, "", pos, *tmpPoker2))
+		sendInWs(UserConnMap[uid], sendCard(models.EVENT_LICENSING, "", pos, *tmpPoker2))
 	}
 }
-
 
 /**
 一局游戏的结束
@@ -387,7 +382,6 @@ func RoomGameEnd(RoomId int) {
 		nngmm.PotAll += v
 	}
 
-
 	if len(gameMatchAllinMap[RoomId]) > 0 {
 		potAll := nngmm.PotAll                                          //总池
 		allInPointDesc := models.RankByPoint(gameMatchAllinMap[RoomId]) //根据allin数量进行的排序
@@ -401,7 +395,7 @@ func RoomGameEnd(RoomId int) {
 			if needCalPot > potAll {
 				needCalPot = potAll
 			}
-			winUser, _ := GetBigUserInRoom(calUserDetail,RoomId)
+			winUser, _ := GetBigUserInRoom(calUserDetail, RoomId)
 			perPot := needCalPot / len(winUser)
 			for _, v := range winUser {
 				models.ChangeUserPoint(roundUserDetailMap[RoomId][v].UserId, perPot)
@@ -414,7 +408,7 @@ func RoomGameEnd(RoomId int) {
 		}
 		if potAll > 0 { //cal_user_detail中还剩余多个未allin玩家时未出现
 			var winUser2 []int
-			winUser2, _ = GetBigUserInRoom(roundUserDetailMap[RoomId],RoomId)
+			winUser2, _ = GetBigUserInRoom(roundUserDetailMap[RoomId], RoomId)
 
 			perPot := potAll / len(winUser2)
 			for _, v := range winUser2 {
@@ -446,8 +440,8 @@ func RoomGameEnd(RoomId int) {
 	}
 
 	SendUserPointInfoToRoom(RoomId)
-	sendToRoomUser(RoomId,tmpCard)
-	sendToRoomUser(RoomId,newEvent(models.EVENT_GAME_END, "system", "Game End"))
+	sendToRoomUser(RoomId, tmpCard)
+	sendToRoomUser(RoomId, newEvent(models.EVENT_GAME_END, "system", "Game End"))
 
 }
 
@@ -500,13 +494,13 @@ func CalWinUserInRoom(RoomId int) []int {
 		BigCard:   showMaxCard,
 		UserCards: UsersCardMap[RoomId],
 	}
-	sendToRoomUser(RoomId,a)
+	sendToRoomUser(RoomId, a)
 
 	return winUser
 }
 
 //传入当前仍在场的用户
-func GetBigUserInRoom(iru map[int]models.InRoundUserDetail,RoomId int) ([]int, string) {
+func GetBigUserInRoom(iru map[int]models.InRoundUserDetail, RoomId int) ([]int, string) {
 	tmpCardC := make(map[int]string)
 	bigString := ""
 	var winUser uint64
@@ -564,17 +558,17 @@ func endRoomRoundPoint(RoomId int) {
 	case models.GAME_STATUS_ROUND1:
 		nextRound = models.GAME_STATUS_ROUND2
 		tmpGameMatch.Pot1st = getRoomRoundPoint(RoomId, true)
-		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][1]))
-		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][2]))
-		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][3]))
+		sendToRoomUser(RoomId, sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][1]))
+		sendToRoomUser(RoomId, sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][2]))
+		sendToRoomUser(RoomId, sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][3]))
 	case models.GAME_STATUS_ROUND2:
 		nextRound = models.GAME_STATUS_ROUND3
 		tmpGameMatch.Pot2nd = getRoomRoundPoint(RoomId, true)
-		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][4]))
+		sendToRoomUser(RoomId, sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][4]))
 	case models.GAME_STATUS_ROUND3:
 		nextRound = models.GAME_STATUS_ROUND4
 		tmpGameMatch.Pot3rd = getRoomRoundPoint(RoomId, true)
-		sendToRoomUser(RoomId,sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][5]))
+		sendToRoomUser(RoomId, sendCard(models.EVENT_PUBLIC_CARD, "", 0, PublicCardMap[RoomId][5]))
 	case models.GAME_STATUS_ROUND4:
 		nextRound = models.GAME_STATUS_END
 		tmpGameMatch.Pot4th = getRoomRoundPoint(RoomId, true)
@@ -618,7 +612,7 @@ func getRoomRoundPoint(RoomId int, clear bool) int {
 	return 0
 }
 
-func nextRoomRoundInfo(RoomId int){
+func nextRoomRoundInfo(RoomId int) {
 	tmp := roundUserDetailMap[RoomId][PositionTurnMap[RoomId]]
 	tmp.AllowOp = tmp.AllowOp[0:0]
 	if LimitPointMap[RoomId] == 0 {
@@ -644,7 +638,7 @@ func nextRoomRoundInfo(RoomId int){
 
 	data.Detail = tmp
 	data.AllPointInRound = getRoomRoundPoint(RoomId, false)
-	sendToRoomUser(RoomId,data)
+	sendToRoomUser(RoomId, data)
 }
 
 //用于查找下一个位置的人，有则返回座位号，无则返回false
@@ -662,9 +656,9 @@ func getNextPositionInRoom(RoomId int, InitPosition int) int {
 	return 0
 }
 
-func SendUserPointInfoToRoom(RoomId int){
+func SendUserPointInfoToRoom(RoomId int) {
 	var data UserInfoMsg
 	data.Type = models.EVENT_REFRESH_USER_INFO
 	data.Info = models.GetUserPointWithSeat(RoomId)
-	sendToRoomUser(RoomId,data)
+	sendToRoomUser(RoomId, data)
 }

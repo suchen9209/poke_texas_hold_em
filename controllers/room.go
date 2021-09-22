@@ -15,6 +15,12 @@ type RoomController struct {
 	baseController
 }
 
+type JsonResponse struct {
+	Code int32       `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
+}
+
 var user models.User
 
 func (r *RoomController) Prepare() {
@@ -61,6 +67,24 @@ func (r *RoomController) Create() {
 	r.Data["UserName"] = user.Name
 }
 
+func (r *RoomController) Close() {
+	roomID, err := strconv.Atoi(r.Ctx.Input.Param(":id"))
+
+	var jsonData JsonResponse
+	if err != nil {
+		jsonData.Code = 100
+		jsonData.Msg = "error input"
+		r.Data["json"] = &jsonData
+		r.ServeJSON()
+	}
+
+	roomManageCloseList <- roomID
+	jsonData.Code = 0
+	jsonData.Msg = "success"
+	r.Data["json"] = &jsonData
+	r.ServeJSON()
+}
+
 func (r *RoomController) EntryRoom() {
 	roomID := r.Ctx.Input.Param(":id")
 
@@ -75,7 +99,7 @@ func (r *RoomController) RoomSocket() {
 	user := r.GetSession("USER")
 	roomID, err := strconv.Atoi(r.Ctx.Input.Param(":id"))
 	//logs.Info(user)
-	if user == nil || err != nil{
+	if user == nil || err != nil {
 		r.Redirect("/", 302)
 		return
 	}
@@ -85,8 +109,8 @@ func (r *RoomController) RoomSocket() {
 	//ws, err := websocket.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil, 1024, 1024)
 	upgrade := websocket.Upgrader{
 		HandshakeTimeout: 10,
-		ReadBufferSize: 1024,
-		WriteBufferSize: 1024,
+		ReadBufferSize:   1024,
+		WriteBufferSize:  1024,
 	}
 	ws, err := upgrade.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil)
 	if err != nil {
@@ -103,7 +127,7 @@ func (r *RoomController) RoomSocket() {
 
 	UserConnMap[u.Id] = ws
 
-	gu := models.SetUserIntoRoom(u,roomID)
+	gu := models.SetUserIntoRoom(u, roomID)
 	msg, _ := json.Marshal(models.SeatInfo{
 		Type:     models.EVENT_JOIN,
 		GameUser: gu,
@@ -148,7 +172,6 @@ func (r *RoomController) RoomSocket() {
 	}
 }
 
-
 func (r *RoomController) Post() {
 	roomName := r.GetString("room_name")
 	roomPassword := r.GetString("room_password")
@@ -167,7 +190,7 @@ func (r *RoomController) Post() {
 	}
 }
 
-func sendChan(roomId int){
+func sendChan(roomId int) {
 	//logs.Info("164")
 	roomManageOpenList <- roomId
 }

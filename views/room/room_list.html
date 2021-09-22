@@ -27,6 +27,9 @@
                     <th>
                         啥情况
                     </th>
+                    <th>
+                        看不顺眼
+                    </th>
                 </tr>
                 </thead>
                 <tbody>
@@ -47,6 +50,9 @@
                     <td>
                         <a href="/room/entry/{{.Id}}">进！</a>
                     </td>
+                    <td>
+                        <button class="button active button-action ajax-click" data-id={{.Id}}>爬！</button>
+                    </td>
                 </tr>
                 {{end}}
                 </tbody>
@@ -54,4 +60,27 @@
         </div>
     </div>
 </div>
+
+<script>
+    $(function () {
+        $(".ajax-click").on("click",function () {
+            let a_room_id = $(this).attr("data-id")
+            $.ajax({
+                url: "/room/close/"+a_room_id,
+                method: "post",
+                dataType: "json",
+                success: function (res) {
+                    console.log(res);
+                    let code = res.code;
+                    if (code === 0) {
+                        alert("Yeah!");
+                        location.reload()
+                    } else {
+                        alert("No!");
+                    }
+                }
+            });
+        });
+    })
+</script>
 {{end}}
