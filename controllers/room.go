@@ -70,6 +70,7 @@ func (r *RoomController) Create() {
 func (r *RoomController) Close() {
 	roomID, err := strconv.Atoi(r.Ctx.Input.Param(":id"))
 
+	logs.Info(roomID)
 	var jsonData JsonResponse
 	if err != nil {
 		jsonData.Code = 100
@@ -184,6 +185,7 @@ func (r *RoomController) Post() {
 	if roomId > 0 {
 		roomManageOpenList <- int(roomId)
 		r.Redirect("/room/entry/"+strconv.FormatInt(roomId, 10), 302)
+		return
 	} else {
 		r.Redirect("/room", 302)
 		return

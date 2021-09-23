@@ -75,6 +75,23 @@ CREATE TABLE `game_user` (
   UNIQUE KEY `user_id` (`user_id`,`game_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+/*Table structure for table `room` */
+
+DROP TABLE IF EXISTS `room`;
+
+CREATE TABLE `room` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `game_id` int(11) DEFAULT NULL,
+  `create_user_id` int(11) DEFAULT NULL,
+  `room_name` varchar(255) DEFAULT NULL,
+  `room_password` varchar(255) DEFAULT NULL,
+  `limit_member` int(11) DEFAULT 8,
+  `init_base_point` int(11) DEFAULT 1,
+  `uppoint_after_game_match_number` int(11) DEFAULT 5,
+  `online` tinyint(2) DEFAULT 1,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
 /*Table structure for table `user` */
 
 DROP TABLE IF EXISTS `user`;
