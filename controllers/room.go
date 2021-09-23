@@ -107,14 +107,15 @@ func (r *RoomController) RoomSocket() {
 
 	u := user.(models.User)
 
-	//ws, err := websocket.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil, 1024, 1024)
-	upgrade := websocket.Upgrader{
-		HandshakeTimeout: 10,
-		ReadBufferSize:   1024,
-		WriteBufferSize:  1024,
-	}
-	ws, err := upgrade.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil)
+	ws, err := websocket.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil, 1024, 1024)
+	//upgrade := websocket.Upgrader{
+	//	HandshakeTimeout: 10,
+	//	ReadBufferSize:   1024,
+	//	WriteBufferSize:  1024,
+	//}
+	//ws, err := upgrade.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil)
 	if err != nil {
+		logs.Info(err)
 		return
 	}
 
