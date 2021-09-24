@@ -107,13 +107,20 @@ func (r *RoomController) RoomSocket() {
 
 	u := user.(models.User)
 
-	ws, err := websocket.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil, 1024, 1024)
-	//upgrade := websocket.Upgrader{
-	//	HandshakeTimeout: 10,
-	//	ReadBufferSize:   1024,
-	//	WriteBufferSize:  1024,
-	//}
-	//ws, err := upgrade.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil)
+	//ws, err := websocket.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil, 1024, 1024)
+	upgrade := websocket.Upgrader{
+		//HandshakeTimeout: 10,
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		Error: func(w http.ResponseWriter, r *http.Request, status int, reason error) {
+
+		},
+		CheckOrigin: func(r *http.Request) bool {
+			// allow all connections by default
+			return true
+		},
+	}
+	ws, err := upgrade.Upgrade(r.Ctx.ResponseWriter, r.Ctx.Request, nil)
 	if err != nil {
 		logs.Info(err)
 		return
