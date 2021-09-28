@@ -5,6 +5,7 @@ type Room struct {
 	CreateUserId int
 	RoomName     string `form:"room_name"`
 	RoomPassword string `form:"room_password"`
+	CardType     string `form:"room_card_type"`
 }
 
 func CreateRoom(r *Room) int64 {
