@@ -252,10 +252,10 @@ func startRoomGame(RoomId int) {
 	userOpMsg := models.UserOperationMsg{
 		Type:     models.EVENT_USER_OPERATION_INFO,
 		Position: nowGameMatchMap[RoomId].SmallBindPosition,
-		Name:     roundUserDetailMap[RoomId][nowGameMatch.SmallBindPosition].Name,
+		Name:     roundUserDetailMap[RoomId][nowGameMatchMap[RoomId].SmallBindPosition].Name,
 		GameMatchLog: models.GameMatchLog{
 			GameMatchId: nowGameMatchMap[RoomId].Id,
-			UserId:      roundUserDetailMap[RoomId][nowGameMatch.SmallBindPosition].UserId,
+			UserId:      roundUserDetailMap[RoomId][nowGameMatchMap[RoomId].SmallBindPosition].UserId,
 			Operation:   models.GAME_OP_RAISE,
 			PointNumber: 5,
 		},

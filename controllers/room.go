@@ -168,7 +168,7 @@ func (r *RoomController) RoomSocket() {
 				Position: data.Position,
 				Name:     data.Name,
 				GameMatchLog: models.GameMatchLog{
-					UserId:      data.UserId,
+					UserId:      u.Id,
 					Operation:   data.Operation,
 					PointNumber: data.Point,
 				},
