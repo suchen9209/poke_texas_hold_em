@@ -184,11 +184,12 @@ func (r *RoomController) RoomSocket() {
 func (r *RoomController) Post() {
 	roomName := r.GetString("room_name")
 	roomPassword := r.GetString("room_password")
-	roomCardType := r.GetString("room_card_type")
+	roomCardType := r.GetString("room_card_type", models.RoomShortType)
 	room := models.Room{
 		CreateUserId: user.Id,
 		RoomName:     roomName,
 		RoomPassword: roomPassword,
+		CardType:     roomCardType,
 	}
 	roomId := models.CreateRoom(&room)
 	if roomId > 0 {

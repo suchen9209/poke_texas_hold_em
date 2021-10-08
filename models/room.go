@@ -8,6 +8,9 @@ type Room struct {
 	CardType     string `form:"room_card_type"`
 }
 
+const RoomShortType = "short"
+const RoomLongType = "long"
+
 func CreateRoom(r *Room) int64 {
 	insert, err := o.Insert(r)
 	if err != nil {
