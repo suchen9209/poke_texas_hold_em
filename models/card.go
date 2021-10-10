@@ -57,11 +57,16 @@ func InitCardMap() {
 	}
 }
 
-func GetNewCardMap() map[int]Card {
+func GetNewCardMap(cardType string) map[int]Card {
 	tmpCardMap := make(map[int]Card, 40)
 	suitsArr := [4]string{HEART, DIAMOND, SPADE, CLUB}
 	index := 1
-	for i := POKER_NUMBER_6; i <= POKER_NUMBER_A; i++ {
+	minCard := POKER_NUMBER_2
+	if cardType == "long" {
+		minCard = POKER_NUMBER_6
+	}
+
+	for i := minCard; i <= POKER_NUMBER_A; i++ {
 		for _, v := range suitsArr {
 			poker := Card{Value: i, Color: v}
 			tmpCardMap[index] = poker
@@ -71,7 +76,7 @@ func GetNewCardMap() map[int]Card {
 	return tmpCardMap
 }
 
-func GetOneCardFromCardMap(c map[int]Card) *Card{
+func GetOneCardFromCardMap(c map[int]Card) *Card {
 	var card = new(Card)
 	for key, v := range c {
 		card = &v
@@ -164,8 +169,8 @@ func StringToCard(s string) []Card {
 	return cc
 }
 
-func TransMaxHandToCardInfo(cardStr string) []Card{
-	mh := analyzeHandStr(cardStr).getMaxHands()
+func TransMaxHandToCardInfo(cardStr string, CardType string) []Card {
+	mh := analyzeHandStr(cardStr).getMaxHands(CardType)
 	ShowMaxCard = ShowMaxCard[0:0]
 	handInt := mh.MaxHand
 	switch mh.MaxCase {
@@ -376,9 +381,9 @@ type MaxHand struct {
 }
 
 // 比较两张手牌、支持任意数量手牌及任意数量赖子
-func Compare(strA string, strB string) int {
-	playerA := analyzeHandStr(strA).getMaxHands()
-	playerB := analyzeHandStr(strB).getMaxHands()
+func Compare(strA string, strB string, cardType string) int {
+	playerA := analyzeHandStr(strA).getMaxHands(cardType)
+	playerB := analyzeHandStr(strB).getMaxHands(cardType)
 
 	// 比较最大牌型
 	if winner := getWinner(playerA.MaxCase, playerB.MaxCase); winner != 0 {
@@ -391,9 +396,14 @@ func Compare(strA string, strB string) int {
 		return winner
 	}
 
+	var mh uint64
+	mh = A9876
+	if cardType == "long" {
+		mh = A2345
+	}
 	// 顺子&同花顺存在“A2345”这一特殊情况，此时为最小顺子，需要手动标记（权值score设为0）
-	scoreA := If(playerA.MaxHand == A9876, uint64(0), playerA.MaxHand).(uint64)
-	scoreB := If(playerB.MaxHand == A9876, uint64(0), playerB.MaxHand).(uint64)
+	scoreA := If(playerA.MaxHand == mh, uint64(0), playerA.MaxHand).(uint64)
+	scoreB := If(playerB.MaxHand == mh, uint64(0), playerB.MaxHand).(uint64)
 	winner := getWinner(scoreA, scoreB)
 	if winner == 2 {
 		GameMaxHand = *playerB
@@ -449,13 +459,13 @@ func analyzeHandStr(handStr string) *Hand {
 }
 
 // 获取最大手牌
-func (hand *Hand) getMaxHands() *MaxHand {
+func (hand *Hand) getMaxHands(cardType string) *MaxHand {
 	maxHand := MaxHand{}
-	if maxHand.isStraightFlush(hand) {
+	if maxHand.isStraightFlush(hand, cardType) {
 	} else if maxHand.isFourOfAKind(hand) {
 	} else if maxHand.isFullHouse(hand) {
 	} else if maxHand.isFlush(hand) {
-	} else if maxHand.isStraight(hand) {
+	} else if maxHand.isStraight(hand, cardType) {
 	} else if maxHand.isThreeOfAKind(hand) {
 	} else if maxHand.isTwoPair(hand) {
 	} else if maxHand.isOnePair(hand) {
@@ -466,7 +476,7 @@ func (hand *Hand) getMaxHands() *MaxHand {
 }
 
 // 筛选同花顺
-func (maxHand *MaxHand) isStraightFlush(hand *Hand) bool {
+func (maxHand *MaxHand) isStraightFlush(hand *Hand, cardType string) bool {
 	//hand.Faces
 	//0000000000000		4	[3]
 	//0000000000001		3 	[2]
@@ -485,7 +495,7 @@ func (maxHand *MaxHand) isStraightFlush(hand *Hand) bool {
 			maxHand.FlushFlag = true
 			maxHand.FlushSuit = i
 			// 再用检查是否有顺子，若有则标记为同花顺
-			if tempValue = findStraight(hand.Suits[i]); tempValue > 0 {
+			if tempValue = findStraight(hand.Suits[i], cardType); tempValue > 0 {
 				if maxHand.MaxHand == 0 {
 					maxHand.MaxHand = tempValue
 				} else {
@@ -552,8 +562,8 @@ func (maxHand *MaxHand) isFlush(hand *Hand) bool {
 }
 
 // 筛选顺子
-func (maxHand *MaxHand) isStraight(hand *Hand) bool {
-	if maxHand.MaxHand = findStraight(hand.Faces[0]); maxHand.MaxHand != 0 {
+func (maxHand *MaxHand) isStraight(hand *Hand, cardType string) bool {
+	if maxHand.MaxHand = findStraight(hand.Faces[0], cardType); maxHand.MaxHand != 0 {
 		maxHand.MaxCase = Straight
 		return true
 	}
@@ -603,7 +613,7 @@ func (maxHand *MaxHand) isHighCard(hand *Hand) bool {
 //****************************以下为工具代码**********************************
 
 // 查找序列中可能存在的顺子，并返回牌面最大的一个
-func findStraight(data uint64) uint64 {
+func findStraight(data uint64, cardType string) uint64 {
 	var cardNum uint64
 	var cardMold uint64
 
@@ -623,6 +633,9 @@ func findStraight(data uint64) uint64 {
 
 	// 最后判断"A2345"这一特殊情况
 	cardMold = A9876
+	if cardType == "long" {
+		cardMold = A2345
+	}
 	if cardNum = CountOne(data & cardMold); cardNum >= 5 {
 		return cardMold
 	}

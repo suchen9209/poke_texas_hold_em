@@ -134,7 +134,9 @@ func (r *RoomController) RoomSocket() {
 		return
 	}
 
+	logs.Info(UserConnMap)
 	UserConnMap[u.Id] = ws
+	logs.Info(UserConnMap)
 
 	gu := models.SetUserIntoRoom(u, roomID)
 	msg, _ := json.Marshal(models.SeatInfo{
@@ -176,6 +178,10 @@ func (r *RoomController) RoomSocket() {
 			// logs.Info("user op")
 			// logs.Info(top)
 			userOperationProcessMap[roomID] <- top
+		case "heart_beat":
+			tmpByte := "pong"
+			ws.WriteMessage(websocket.TextMessage, []byte(tmpByte))
+			//ws.WriteMessage(websocket.PongMessage, []byte(tmpByte))
 		}
 
 	}

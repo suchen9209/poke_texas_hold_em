@@ -657,7 +657,7 @@ func CalWinUser() []int {
 		if bigString == v {
 			continue
 		}
-		result := models.Compare(v, bigString)
+		result := models.Compare(v, bigString, "short")
 		if result == 1 {
 			winUser = winUser[0:0]
 			winUser = append(winUser, k)

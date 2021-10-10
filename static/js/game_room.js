@@ -5,6 +5,7 @@ let user_id;
 let round_status = "";
 const all_user_point = new Array(9);
 let round_min_limit = 0;
+let room_id;
 
 function get_card_html(color,value){
     let html = '<div class="card">'+
@@ -18,192 +19,237 @@ function show_op_button(){
     console.log("show button");
 }
 
-$(document).ready(function () {
-    // Create a socket
-    let room_id = $('#room_id').val()
+function reconnect(){
+    socket.close()
+    initWebSocket()
+}
+
+function initWebSocket(){
+
     socket = new WebSocket('ws://' + window.location.host + '/room/join/'+room_id);
     // Message received on the socket
     socket.onmessage = function (event) {
+        heartCheck.reset()
+        console.log(event.data);
+        if(event.data === "pong"){
+            return
+        }
         var data = JSON.parse(event.data);
         // var li = document.createElement('li');
         let pos_str;
 
-        console.log(data);
-
-        
         switch (data.Type) {
-        case 0: // JOIN
-            //You joined the chat room.
-            my_position = data.GameUser.Position
-            user_id = data.GameUser.UserId
-            break;
-        case 1: // LEAVE
-            // li.innerText = data.User + ' left the chat room.';
-            break;
-        case 2: // MESSAGE
-            // var username = document.createElement('strong');
-            // var content = document.createElement('span');
+            case 0: // JOIN
+                //You joined the chat room.
+                my_position = data.GameUser.Position
+                user_id = data.GameUser.UserId
+                break;
+            case 1: // LEAVE
+                // li.innerText = data.User + ' left the chat room.';
+                break;
+            case 2: // MESSAGE
+                // var username = document.createElement('strong');
+                // var content = document.createElement('span');
 
-            // username.innerText = data.User;
-            // content.innerText = data.Content;
+                // username.innerText = data.User;
+                // content.innerText = data.Content;
 
-            // li.appendChild(username);
-            // li.appendChild(document.createTextNode(': '));
-            // li.appendChild(content);
-            break;
-        case 3://发牌
-            $('#start_game').hide();
-            if (data.Position === my_position){
+                // li.appendChild(username);
+                // li.appendChild(document.createTextNode(': '));
+                // li.appendChild(content);
+                break;
+            case 3://发牌
+                $('#start_game').hide();
+                if (data.Position === my_position){
+                    let card_html = get_card_html(data.Card.Color,data.Card.Value);
+                    $("#user_card_detail").append(card_html)
+
+                }
+                pos_str = "#pos" + data.Position;
+                // $(pos_str + " .user_name").html(data.User);
                 let card_html = get_card_html(data.Card.Color,data.Card.Value);
-                $("#user_card_detail").append(card_html)
+                $(pos_str + " .user_card").append(card_html)
+                break;
+            case 4://公共牌
+                let public_card_html = get_card_html(data.Card.Color,data.Card.Value);
+                $("#public_card_table").append(public_card_html)
+                break;
+            case 5://清理场面上的牌
+                $(".user_card").html("")
+                $("#public_card_table").html("")
+                $("#user_card_detail").html("")
+                break;
+            case 6://更新用户信息
+                let info = data.Info;
+                let user_point_html = "";
+                for (const key in info) {
+                    if (Object.hasOwnProperty.call(info, key)) {
+                        const element = info[key];
+                        user_point_html = user_point_html + "<p>Pos: "+ element.Position + " "+" Name: "+element.Name+" Point: "+element.Point +"</p>";
+                        $("#RoundInfo").html(roundhtml);
+                        let pos_str = "#pos" + element.Position;
+                        $(pos_str + " .user_name").html(element.Name);
+                        $(pos_str + " .user_point").html(element.Point);
+                        all_user_point[element.Position] = element.Point;
+                        if(element.Position === my_position && element.Point <= 0){
+                            $("#greedisgood").show();
+                        }
+                    }
+                }
+                $("#UserPoint").html(user_point_html);
+                break;
+            case 7://回合信息
+                $(".quantity button").removeClass("enable").addClass("unable");
+                $(".quantity").hide();
+                if(data.NowPosition === my_position && data.GM.GameStatus != "END"){
+                    $("#your_turn").show();
+                    $(".quantity").show();
+                    for (const key in data.Detail.AllowOp) {
+                        $("#"+data.Detail.AllowOp[key]).removeClass("unable").addClass("enable");
+                        if(data.Detail.AllowOp[key] == 'raise'){
+                            $("#add_point").attr("min",data.MaxPoint)
+                            $("#add_point").attr("max",data.Detail.Point)
+                        }
+                    }
+                }
+                if(round_status != data.GM.GameStatus && data.GM.GameStatus != 'END'){
+                    var op7html = "<p>"+ data.GM.GameStatus+ "</p>";
+                    $("#UserOp").append(op7html);
+                }
+                round_status = data.GM.GameStatus
+                round_min_limit = data.MaxPoint - data.Detail.RoundPoint
+                var roundhtml = "<p>"+data.GM.GameStatus+"</p>"
+                    + "<p>当前轮底池："+ data.AllPointInRound + "</p>"
+                    + "<p>当前位置："+ data.NowPosition + "</p>"
+                    + "<p>最小Point：" + data.MaxPoint + "</p>"
+                    + "<p>小盲："+ data.GM.SmallBindPosition + "</p>"
+                    + "<p>大盲："+ data.GM.BigBindPosition + "</p>"
+                    + "<p>第一轮底池："+ data.GM.Pot1st + "</p>"
+                    + "<p>第二轮底池："+ data.GM.Pot2nd + "</p>"
+                    + "<p>第三轮底池："+ data.GM.Pot3rd + "</p>"
+                    + "<p>第四轮底池："+ data.GM.Pot4th + "</p>"
+                $("#RoundInfo").html(roundhtml);
+                //渲染回合内容
+                break;
+            case 8://玩家操作
+                var ophtml = "<p>"+ data.Name + " " + data.GameMatchLog.Operation+ " " + data.GameMatchLog.PointNumber + "</p>";
+                $("#UserOp").append(ophtml);
+                if(data.GameMatchLog.Operation == 'fold'){
+                    $("#pos"+data.Position+" .container__status").addClass("container__status_not_onlie");
+                }
+                break;
+            case 9://game end
+                $('#start_game').show();
+                $(".quantity").hide();
+                $("#UserOp").html("");
+                $(".quantity").hide();
+                $(".container__status").removeClass("container__status_not_onlie");
+                break;
+            case 10://
+                $(".container__status").removeClass("container__status_not_onlie");
+                $("#winPos").html("");
+                $("#bigCards").html("");
+                $("#publicCard").html("");
+                $("#EndPanel").show();
+                var t10html = "";
+                for (let index = 0; index < data.WinPos.length; index++) {
+                    const element = data.WinPos[index];
+                    t10html += "<span>Winner is POS " + element + " !!!!</span>";
+                }
+                $("#winPos").html(t10html);
+                var card10html ="Win Card:";
+                for (let index = 0; index < data.BigCard.length; index++) {
+                    const element = data.BigCard[index];
+                    card10html += get_card_html(element.Color,element.Value)
+                }
+                $("#bigCards").html(card10html);
+                var public10html ="Public Card:";
+                for (let index = 0; index < data.PublicCard.length; index++) {
+                    const element = data.PublicCard[index];
+                    public10html += get_card_html(element.Color,element.Value)
+                }
+                $("#publicCard").html(public10html);
+                var uc11html = "";
+                for (let index = 1; index <= 8; index++) {
+                    if(data.UserCards.hasOwnProperty(index)){
+                        uc11html += "pos" + index;
+                        for (let iii = 0; iii < data.UserCards[index].length; iii++) {
+                            const element2 = data.UserCards[index][iii];
+                            uc11html += get_card_html(element2.Color,element2.Value)
+                        }
+                    }
 
-            }
-            pos_str = "#pos" + data.Position;
-            // $(pos_str + " .user_name").html(data.User);
-            let card_html = get_card_html(data.Card.Color,data.Card.Value);
-            $(pos_str + " .user_card").append(card_html)
-            break;
-        case 4://公共牌
-            let public_card_html = get_card_html(data.Card.Color,data.Card.Value);
-            $("#public_card_table").append(public_card_html)
-            break;
-        case 5://清理场面上的牌
-            $(".user_card").html("")
-            $("#public_card_table").html("")
-            $("#user_card_detail").html("")
-            break;
-        case 6://更新用户信息
-            let info = data.Info;
-            let user_point_html = "";
-            for (const key in info) {
-                if (Object.hasOwnProperty.call(info, key)) {
-                    const element = info[key];
-                    user_point_html = user_point_html + "<p>Pos: "+ element.Position + " "+" Name: "+element.Name+" Point: "+element.Point +"</p>";
-                    $("#RoundInfo").html(roundhtml);
-                    let pos_str = "#pos" + element.Position;
-                    $(pos_str + " .user_name").html(element.Name);
-                    $(pos_str + " .user_point").html(element.Point);
-                    all_user_point[element.Position] = element.Point;
-                    if(element.Position === my_position && element.Point <= 0){
-                        $("#greedisgood").show();
-                    }
                 }
-            }
-            $("#UserPoint").html(user_point_html);
-            break;
-        case 7://回合信息
-            $(".quantity button").removeClass("enable").addClass("unable");
-            $(".quantity").hide();
-            if(data.NowPosition === my_position && data.GM.GameStatus != "END"){
-                $("#your_turn").show();
-                $(".quantity").show(); 
-                for (const key in data.Detail.AllowOp) {
-                    $("#"+data.Detail.AllowOp[key]).removeClass("unable").addClass("enable");
-                    if(data.Detail.AllowOp[key] == 'raise'){
-                        $("#add_point").attr("min",data.MaxPoint)
-                        $("#add_point").attr("max",data.Detail.Point)
-                    }
-                } 
-            }
-            if(round_status != data.GM.GameStatus && data.GM.GameStatus != 'END'){
-                var op7html = "<p>"+ data.GM.GameStatus+ "</p>";
-                $("#UserOp").append(op7html);
-            }
-            round_status = data.GM.GameStatus
-            round_min_limit = data.MaxPoint - data.Detail.RoundPoint
-            var roundhtml = "<p>"+data.GM.GameStatus+"</p>"
-            + "<p>当前轮底池："+ data.AllPointInRound + "</p>"
-            + "<p>当前位置："+ data.NowPosition + "</p>"
-            + "<p>最小Point：" + data.MaxPoint + "</p>"
-            + "<p>小盲："+ data.GM.SmallBindPosition + "</p>"
-            + "<p>大盲："+ data.GM.BigBindPosition + "</p>"
-            + "<p>第一轮底池："+ data.GM.Pot1st + "</p>"
-            + "<p>第二轮底池："+ data.GM.Pot2nd + "</p>"
-            + "<p>第三轮底池："+ data.GM.Pot3rd + "</p>"
-            + "<p>第四轮底池："+ data.GM.Pot4th + "</p>"
-            $("#RoundInfo").html(roundhtml);
-            //渲染回合内容
-            break;
-        case 8://玩家操作
-            var ophtml = "<p>"+ data.Name + " " + data.GameMatchLog.Operation+ " " + data.GameMatchLog.PointNumber + "</p>";
-            $("#UserOp").append(ophtml);
-            if(data.GameMatchLog.Operation == 'fold'){
-                $("#pos"+data.Position+" .container__status").addClass("container__status_not_onlie");
-            }
-            break;
-        case 9://game end
-            $('#start_game').show();
-            $(".quantity").hide();
-            $("#UserOp").html("");
-            $(".quantity").hide();
-            $(".container__status").removeClass("container__status_not_onlie");
-            break;
-        case 10://
-            $(".container__status").removeClass("container__status_not_onlie");
-            $("#winPos").html("");
-            $("#bigCards").html("");
-            $("#publicCard").html("");
-            $("#EndPanel").show();
-            var t10html = "";
-            for (let index = 0; index < data.WinPos.length; index++) {
-                const element = data.WinPos[index];
-                t10html += "<span>Winner is POS " + element + " !!!!</span>";
-            }
-            $("#winPos").html(t10html);
-            var card10html ="Win Card:";
-            for (let index = 0; index < data.BigCard.length; index++) {
-                const element = data.BigCard[index];
-                card10html += get_card_html(element.Color,element.Value)
-            }
-            $("#bigCards").html(card10html);
-            var public10html ="Public Card:";
-            for (let index = 0; index < data.PublicCard.length; index++) {
-                const element = data.PublicCard[index];
-                public10html += get_card_html(element.Color,element.Value)
-            }
-            $("#publicCard").html(public10html);
-            var uc11html = "";
-            for (let index = 1; index <= 8; index++) {
-                if(data.UserCards.hasOwnProperty(index)){
-                    uc11html += "pos" + index;
-                    for (let iii = 0; iii < data.UserCards[index].length; iii++) {
-                        const element2 = data.UserCards[index][iii];
-                        uc11html += get_card_html(element2.Color,element2.Value)
-                    }
-                }
-                
-            }
-            
-            $("#userCards").html(uc11html);
-        case 11:
-            
+
+                $("#userCards").html(uc11html);
+            case 11:
+
         }
 
         // $('#chatbox li').first().before(li);
     };
-
-    var postMsg = function (message,type){
-        let msg = {
-            "Message" : message,
-            "Type"    : type
-        }
-        let send_json = JSON.stringify(msg);
-        socket.send(send_json);
+    socket.onclose = function (event){
+        reconnect();
+    };
+    socket.onerror = function (event){
+        reconnect();
+    };
+    socket.onopen = function (event){
+        heartCheck.start()
     }
 
-    var postOperation = function (type,operation,point){
-        let msg = {
-            "Type"      :   type,
-            "Operation" :   operation,
-            "Point"     :   point,
-            "UserId"    :   user_id,
-            "Position"  :   my_position,
-            "Name"      :   uname
-        }
-        let send_json = JSON.stringify(msg);
-        socket.send(send_json);
-        $("#your_turn").hide();
+}
+
+var postMsg = function (message,type){
+    let msg = {
+        "Message" : message,
+        "Type"    : type
     }
+    let send_json = JSON.stringify(msg);
+    socket.send(send_json);
+}
+
+var postOperation = function (type,operation,point){
+    let msg = {
+        "Type"      :   type,
+        "Operation" :   operation,
+        "Point"     :   point,
+        "UserId"    :   user_id,
+        "Position"  :   my_position,
+        "Name"      :   uname
+    }
+    let send_json = JSON.stringify(msg);
+    socket.send(send_json);
+    $("#your_turn").hide();
+}
+
+var heartCheck = {
+    timeout: 15000,
+    timeoutObj: null,
+    serverTimeoutObj: null,
+    reset: function(){
+        clearTimeout(this.timeoutObj);
+        clearTimeout(this.serverTimeoutObj);
+        this.start();
+    },
+    start: function(){
+        var self = this;
+        this.timeoutObj = setTimeout(function(){
+            console.log("123")
+            postMsg("ping","heart_beat");
+            // socket.send("HeartBeat");
+            self.serverTimeoutObj = setTimeout(function(){
+                socket.close();
+            }, self.timeout)
+        }, this.timeout)
+    },
+}
+
+
+$(document).ready(function () {
+    room_id = $('#room_id').val()
+    // Create a socket
+    initWebSocket();
 
 
     $('#add_point_button').click(function () {

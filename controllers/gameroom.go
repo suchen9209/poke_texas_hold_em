@@ -314,7 +314,7 @@ func roomNextRoundInfo(RoomId int) {
 }
 
 func initCardMap(roomId int) {
-	GameAllCardMap[roomId] = models.GetNewCardMap()
+	GameAllCardMap[roomId] = models.GetNewCardMap("short")
 	PublicCardMap[roomId] = make(map[int]models.Card)
 	UsersCardMap[roomId] = make(map[int][]models.Card)
 }
@@ -465,7 +465,7 @@ func CalWinUserInRoom(RoomId int) []int {
 		if bigString == v {
 			continue
 		}
-		result := models.Compare(v, bigString)
+		result := models.Compare(v, bigString, "short")
 		if result == 1 {
 			winUser = winUser[0:0]
 			winUser = append(winUser, k)
@@ -480,7 +480,7 @@ func CalWinUserInRoom(RoomId int) []int {
 		winCard = append(winCard, UsersCardMap[RoomId][v])
 	}
 
-	showMaxCard := models.TransMaxHandToCardInfo(bigString)
+	showMaxCard := models.TransMaxHandToCardInfo(bigString, "short")
 	var tmp []models.Card
 	for _, v := range PublicCardMap[RoomId] {
 		tmp = append(tmp, v)
@@ -520,7 +520,7 @@ func GetBigUserInRoom(iru map[int]models.InRoundUserDetail, RoomId int) ([]int, 
 		if bigString == v {
 			continue
 		}
-		result := models.Compare(v, bigString)
+		result := models.Compare(v, bigString, "short")
 		if result == 1 {
 			winUser = 1 << k
 			bigString = v

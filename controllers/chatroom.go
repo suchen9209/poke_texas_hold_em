@@ -771,7 +771,7 @@ func CalWinUser() []int {
 		if bigString == v {
 			continue
 		}
-		result := models.Compare(v, bigString)
+		result := models.Compare(v, bigString, "short")
 		if result == 1 {
 			winUser = winUser[0:0]
 			winUser = append(winUser, k)
@@ -786,7 +786,7 @@ func CalWinUser() []int {
 		winCard = append(winCard, models.UsersCard[v])
 	}
 
-	models.TransMaxHandToCardInfo(bigString)
+	models.TransMaxHandToCardInfo(bigString, "short")
 	var tmp []models.Card
 	for _, v := range models.PublicCard {
 		tmp = append(tmp, v)
@@ -828,7 +828,7 @@ func GetBigUser(iru map[int]models.InRoundUserDetail) ([]int, string) {
 		if bigString == v {
 			continue
 		}
-		result := models.Compare(v, bigString)
+		result := models.Compare(v, bigString, "short")
 		if result == 1 {
 			winUser = 1 << k
 			bigString = v
