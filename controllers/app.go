@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"poke/models"
+	"poke/service"
 	"strings"
 
 	"github.com/beego/beego/v2/core/logs"
@@ -98,6 +99,20 @@ func (a *AppController) Login() {
 	// 	Msg:  e.Error(),
 	// }
 	// a.ServeJSON()
+}
+
+func (a *AppController) JsonLogin() {
+	var auth = service.Auth{
+		Name: "Auth",
+	}
+	a.Data["json"] = auth.CheckUser(&a.Controller)
+	logs.Info(a.Data)
+	err := a.ServeJSON()
+	if err != nil {
+		logs.Info(err)
+		return
+	}
+
 }
 
 // Join method handles POST requests for AppController.
