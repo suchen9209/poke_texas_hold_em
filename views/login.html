@@ -16,7 +16,7 @@
                 <div class='icon'>
                     <img alt="" src='/static/img/login/user_icon_copy.png'>
                 </div>
-                <input name="login" placeholder='用户名' maxlength="16" type='text' autocomplete="off" value=""/>
+                <input id="login_name" name="login" placeholder='用户名' maxlength="16" type='text' autocomplete="off" value=""/>
                 <div class='validation'>
                     <img alt="" src='/static/img/login/tick.png'>
                 </div>
@@ -25,12 +25,12 @@
                 <div class='icon'>
                     <img alt="" src='/static/img/login/lock_icon_copy.png'>
                 </div>
-                <input name="pwd" placeholder='密码' maxlength="16" type='text' autocomplete="off">
+                <input id="login_pwd" name="pwd" placeholder='密码' maxlength="16" type='password' autocomplete="off">
                 <div class='validation'>
                     <img alt="" src='/static/img/login/tick.png'>
                 </div>
             </div>
-            <div class='login_fields__submit'>
+            <div class='login_fields__submit' id="login_button">
                 <input type='button' value='登录'>
             </div>
         </div>
@@ -41,4 +41,5 @@
         </div>
     </div>
 </div>
+<script type="application/javascript" src="/static/js/login/login.js"></script>
 {{end}}
