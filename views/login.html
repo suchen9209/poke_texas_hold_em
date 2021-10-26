@@ -7,7 +7,7 @@
 {{end}}
 {{define "body"}}
 <div class="container login_main_panel" style="width: 100%;margin: auto;">
-    <div class='login'>
+    <div class='login' id="login_panel">
         <div class='login_title'>
             <span>PY登录</span>
         </div>
@@ -37,7 +37,49 @@
         <div class='success'>
         </div>
         <div class='disclaimer'>
-            <p>欢迎来到阿拉斯加~</p>
+            <p>欢迎来到阿拉斯加~<span id="show_register" style="color: #2fa0ec;cursor: pointer;">我没号！</span></p>
+        </div>
+    </div>
+    <div class='login' id="register_panel" style="display: none">
+        <div class='login_title'>
+            <span>暴风加入</span>
+        </div>
+        <div class='login_fields'>
+            <div class='login_fields__user'>
+                <div class='icon'>
+                    <img alt="" src='/static/img/login/user_icon_copy.png'>
+                </div>
+                <input id="register_name" name="register_name" placeholder='用户名' maxlength="16" type='text' autocomplete="off" value=""/>
+                <div class='validation'>
+                    <img alt="" src='/static/img/login/tick.png'>
+                </div>
+            </div>
+            <div class='login_fields__password'>
+                <div class='icon'>
+                    <img alt="" src='/static/img/login/lock_icon_copy.png'>
+                </div>
+                <input id="register_pwd" name="pwd" placeholder='密码' maxlength="16" type='password' autocomplete="off">
+                <div class='validation'>
+                    <img alt="" src='/static/img/login/tick.png'>
+                </div>
+            </div>
+            <div class='login_fields__password'>
+                <div class='icon'>
+                    <img alt="" src='/static/img/login/lock_icon_copy.png'>
+                </div>
+                <input id="register_pwd2" name="pwd" placeholder='确认密码' maxlength="16" type='password' autocomplete="off">
+                <div class='validation'>
+                    <img alt="" src='/static/img/login/tick.png'>
+                </div>
+            </div>
+            <div class='login_fields__submit' id="register_button">
+                <input type='button' value='入场'>
+            </div>
+        </div>
+        <div class='success'>
+        </div>
+        <div class='disclaimer'>
+            <p>欢迎来到阿拉斯加~<span id="show_login" style="color: #2fa0ec;cursor: pointer;">我有号！</span></p>
         </div>
     </div>
 </div>

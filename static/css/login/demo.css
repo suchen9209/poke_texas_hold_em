@@ -18,7 +18,7 @@ input:-ms-input-placeholder{
 input::-webkit-input-placeholder{
     color: #CECFD2;opacity:1;
 }
-html, body { padding: 0; margin: 0; height: 100%; font-size: 16px; background-repeat: no-repeat; background-position: left top; background-color: #242645; color: #fff; font-family: 'Source Sans Pro';  background-image: url(../../img/login/bg1.jpg); }
+html, body { padding: 0; margin: 0; height: 100%; font-size: 20px; background-repeat: no-repeat; background-position: left top; background-color: #242645; color: #fff; font-family: 'Source Sans Pro';  background-image: url(../../img/login/bg1.jpg); }
 
 h1 {
 	font-size: 2.8em;

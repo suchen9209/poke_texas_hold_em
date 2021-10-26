@@ -115,6 +115,20 @@ func (a *AppController) JsonLogin() {
 
 }
 
+func (a *AppController) JsonRegister() {
+	var auth = service.Auth{
+		Name: "Auth",
+	}
+	a.Data["json"] = auth.AddUser(&a.Controller)
+	logs.Info(a.Data)
+	err := a.ServeJSON()
+	if err != nil {
+		logs.Info(err)
+		return
+	}
+
+}
+
 // Join method handles POST requests for AppController.
 func (a *AppController) Join() {
 	// Get form value.

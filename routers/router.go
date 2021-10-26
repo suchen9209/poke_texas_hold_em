@@ -14,7 +14,8 @@ func init() {
 	beego.Router("/join", &controllers.AppController{}, "post:Join")
 	beego.Router("/login", &controllers.AppController{}, "post:Login")
 
-	beego.Router("/v2/login", &controllers.AppController{}, "post:JsonLogin")
+	beego.Router("/v2/user/login", &controllers.AppController{}, "post:JsonLogin")
+	beego.Router("/v2/user/register", &controllers.AppController{}, "post:JsonRegister")
 
 	beego.Router("/room", &controllers.RoomController{})
 	beego.Router("/room/add", &controllers.RoomController{}, "get:Create")

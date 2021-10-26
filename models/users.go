@@ -15,6 +15,11 @@ func CheckUserLogin(user *User) error {
 	return e
 }
 
+func AddUser(user *User) error {
+	_, err := o.Insert(user)
+	return err
+}
+
 func CheckUser(name string) (*User, bool) {
 	can_login := false
 	var user User

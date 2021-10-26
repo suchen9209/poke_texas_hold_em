@@ -20,6 +20,44 @@ type Auth struct {
 	Strict uint64
 }
 
+func (a *Auth) AddUser(c *beego.Controller) models.JsonData {
+	uname := c.GetString("uname")
+	pwd := c.GetString("password")
+	pwd2 := c.GetString("password2")
+
+	data := models.JsonData{
+		Code: 0,
+		Msg:  "",
+	}
+
+	if pwd != pwd2 {
+		data.Code = 0
+		data.Msg = "Two Password Not Equal"
+		return data
+	}
+
+	salt, _ := beego.AppConfig.String("password_salt")
+
+	u := models.User{
+		Name:     uname,
+		Password: fmt.Sprintf("%x", md5.Sum([]byte(pwd+salt))),
+	}
+
+	err := models.AddUser(&u)
+	if err != nil {
+		return models.JsonData{
+			Code: 10050,
+			Msg:  "Add Failed",
+		}
+	}
+	return models.JsonData{
+		Code: 0,
+		Msg:  "Success",
+		Data: u,
+	}
+
+}
+
 func (a *Auth) CheckUser(c *beego.Controller) models.JsonData {
 	uname := c.GetString("uname")
 	pwd := c.GetString("password")
