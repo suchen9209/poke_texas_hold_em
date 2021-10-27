@@ -16,6 +16,7 @@ func init() {
 
 	beego.Router("/v2/user/login", &controllers.AppController{}, "post:JsonLogin")
 	beego.Router("/v2/user/register", &controllers.AppController{}, "post:JsonRegister")
+	beego.Router("/v2/user/info", &controllers.AppController{}, "post:JsonRegister")
 
 	beego.Router("/room", &controllers.RoomController{})
 	beego.Router("/room/add", &controllers.RoomController{}, "get:Create")
