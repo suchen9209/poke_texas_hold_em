@@ -27,7 +27,7 @@ $(document).ready(function () {
         var data = JSON.parse(event.data);
         // var li = document.createElement('li');
         let pos_str;
-        if(data.Type != 3){
+        if(data.Type !== 3){
             console.log(data);
         }
         

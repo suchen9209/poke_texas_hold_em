@@ -19,11 +19,11 @@ func CreateRoom(r *Room) int64 {
 	return insert
 }
 
-func GetOnlineRoom() []Room {
+func GetOnlineRoom() ([]Room, error) {
 	s := o.QueryTable("room")
 	var RoomList []Room
-	_, _ = s.All(&RoomList)
-	return RoomList
+	_, err := s.All(&RoomList)
+	return RoomList, err
 }
 
 func CloseRoom(roomId int) {

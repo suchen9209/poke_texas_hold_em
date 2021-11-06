@@ -58,8 +58,31 @@ func (r *RoomController) Prepare() {
 func (r *RoomController) Get() {
 	r.TplName = "room/room_list.html"
 	r.Data["UserName"] = user.Name
-	r.Data["RoomList"] = models.GetOnlineRoom()
+	r.Data["RoomList"], _ = models.GetOnlineRoom()
 	//logs.Info(r.Data["RoomList"])
+}
+
+func (r *RoomController) RoomList() {
+
+	room, err := models.GetOnlineRoom()
+	if err != nil {
+		r.Data["json"] = models.JsonData{
+			Code: 10040,
+			Msg:  "Not Found",
+		}
+	} else {
+		r.Data["json"] = models.JsonData{
+			Code: 0,
+			Msg:  "Room List",
+			Data: room,
+		}
+	}
+	err2 := r.ServeJSON()
+	if err2 != nil {
+		logs.Info(err)
+		return
+	}
+
 }
 
 func (r *RoomController) Create() {
