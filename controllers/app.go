@@ -129,6 +129,31 @@ func (a *AppController) JsonRegister() {
 
 }
 
+func (a *AppController) JsonInfo() {
+	s, _ := beego.AppConfig.String("session_name")
+	logs.Info(s)
+	sessionData := a.GetSession(s)
+	logs.Info(sessionData)
+
+	user = sessionData.(models.User)
+
+	data := models.JsonData{}
+
+	if user.Id > 0 {
+		data.Code = 0
+		data.Msg = "Success"
+		data.Data = user
+	} else {
+		data.Code = 401
+		data.Msg = "Not Login"
+	}
+	a.Data["json"] = data
+	err := a.ServeJSON()
+	if err != nil {
+		return
+	}
+}
+
 // Join method handles POST requests for AppController.
 func (a *AppController) Join() {
 	// Get form value.

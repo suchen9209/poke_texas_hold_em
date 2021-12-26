@@ -157,18 +157,21 @@ func (r *RoomController) RoomSocket() {
 		return
 	}
 
-	logs.Info(UserConnMap)
 	UserConnMap[u.Id] = ws
-	logs.Info(UserConnMap)
 
-	gu := models.SetUserIntoRoom(u, roomID)
-	msg, _ := json.Marshal(models.SeatInfo{
-		Type:     models.EVENT_JOIN,
-		GameUser: gu,
-		User:     "",
-	})
+	models.SetUserIntoRoom(u, roomID)
 
-	ws.WriteMessage(websocket.TextMessage, msg)
+	logs.Info(gameOpMap)
+	logs.Info(gameOpMap[roomID])
+	msgStr := "new_user"
+	gameOpMap[roomID] <- msgStr
+	//msg, _ := json.Marshal(models.SeatInfo{
+	//	Type:     models.EVENT_JOIN,
+	//	GameUser: gu,
+	//	User:     "",
+	//})
+	//
+	//ws.WriteMessage(websocket.TextMessage, msg)
 
 	defer Leave(u)
 
@@ -229,6 +232,33 @@ func (r *RoomController) Post() {
 		r.Redirect("/room", 302)
 		return
 	}
+}
+
+func (r *RoomController) CreateJson() {
+	roomName := r.GetString("room_name")
+	roomPassword := r.GetString("room_password")
+	roomCardType := r.GetString("room_card_type", models.RoomShortType)
+	room := models.Room{
+		CreateUserId: user.Id,
+		RoomName:     roomName,
+		RoomPassword: roomPassword,
+		CardType:     roomCardType,
+	}
+	roomId := models.CreateRoom(&room)
+	logs.Info(roomId)
+
+	r.Data["json"] = models.RoomItem{
+		Id: int(roomId),
+	}
+	err := r.ServeJSON()
+	if err != nil {
+		logs.Info(err)
+		return
+	}
+	if roomId > 0 {
+		roomManageOpenList <- int(roomId)
+	}
+
 }
 
 func sendChan(roomId int) {

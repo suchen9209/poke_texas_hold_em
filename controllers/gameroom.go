@@ -108,6 +108,9 @@ func gameRoom(roomId int) {
 				models.CloseRoom(roomId)
 				return
 			}
+			if op == "new_user" {
+				SendUserPointInfoToRoom(roomId)
+			}
 		case roundInfo := <-roundProcessMap[roomId]:
 			switch roundInfo.Type {
 			case models.EVENT_ROUND_INFO:

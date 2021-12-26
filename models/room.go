@@ -8,6 +8,14 @@ type Room struct {
 	CardType     string `form:"room_card_type"`
 }
 
+type RoomItem struct {
+	Id              int
+	RoomName        string
+	RoomCreatorName string
+	OnlineNumber    int
+	RoomStatus      int
+}
+
 const RoomShortType = "short"
 const RoomLongType = "long"
 
