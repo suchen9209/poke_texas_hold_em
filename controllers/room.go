@@ -159,7 +159,7 @@ func (r *RoomController) RoomSocket() {
 
 	UserConnMap[u.Id] = ws
 
-	models.SetUserIntoRoom(u, roomID)
+	gu := models.SetUserIntoRoom(u, roomID)
 
 	logs.Info(gameOpMap)
 	logs.Info(gameOpMap[roomID])
@@ -193,8 +193,8 @@ func (r *RoomController) RoomSocket() {
 		case "user_op":
 			top := models.UserOperationMsg{
 				Type:     models.EVENT_USER_OPERATION_INFO,
-				Position: data.Position,
-				Name:     data.Name,
+				Position: gu.Position,
+				Name:     u.Name,
 				GameMatchLog: models.GameMatchLog{
 					UserId:      u.Id,
 					Operation:   data.Operation,
