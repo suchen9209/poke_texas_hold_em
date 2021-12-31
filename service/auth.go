@@ -50,6 +50,13 @@ func (a *Auth) AddUser(c *beego.Controller) models.JsonData {
 			Msg:  "Add Failed",
 		}
 	}
+	err2 := c.SetSession("USER", u)
+	if err2 != nil {
+		return models.JsonData{
+			Code: 10060,
+			Msg:  "Session Failed",
+		}
+	}
 	return models.JsonData{
 		Code: 0,
 		Msg:  "Success",

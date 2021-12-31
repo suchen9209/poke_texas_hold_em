@@ -112,7 +112,6 @@ func (a *AppController) JsonLogin() {
 		logs.Info(err)
 		return
 	}
-
 }
 
 func (a *AppController) JsonRegister() {
@@ -126,7 +125,6 @@ func (a *AppController) JsonRegister() {
 		logs.Info(err)
 		return
 	}
-
 }
 
 func (a *AppController) JsonInfo() {
