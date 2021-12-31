@@ -88,7 +88,7 @@ func roomManage() {
 }
 
 func init() {
-	logs.Info("77")
+	//logs.Info("77")
 	go roomManage()
 }
 
