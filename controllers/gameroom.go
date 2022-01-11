@@ -102,6 +102,7 @@ func gameRoom(roomId int) {
 			if op == "start" {
 				if nowGameMatchMap[roomId].Id == 0 || nowGameMatchMap[roomId].GameStatus == models.GAME_STATUS_END {
 					startRoomGame(roomId)
+					sendToRoomUser(roomId, newEvent(models.EVENT_GAME_START, "system", "Game Start"))
 				}
 			}
 			if op == "close" {

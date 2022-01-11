@@ -18,6 +18,7 @@ const (
 	EVENT_USER_OPERATION_INFO //用户操作信息
 	EVENT_GAME_END            //游戏结束
 	EVENT_GAME_END_SHOW_CARD  //游戏结束判定卡牌信息
+	EVENT_GAME_START          //游戏开始
 )
 
 type UserType int
