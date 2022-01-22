@@ -19,7 +19,7 @@ func init() {
 		ExposeHeaders: []string{"Content-Length", "Access-Control-Allow-Origin", "Access-Control-Allow-Headers", "Content-Type"},
 		// 如果设置，则允许共享身份验证凭据，例如cookie
 		AllowCredentials: true,
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", "http://www.suchot.com"},
 	}))
 	// Register routers.
 	beego.Router("/", &controllers.AppController{}, "get:Index")
